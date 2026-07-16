@@ -1,0 +1,12 @@
+{
+  "date": "2026-01-01",
+  "station": "KMDS",
+  "readings": [
+    {"timestamp_local": "2026-01-01T00:55:00-06:00", "sky_cover_pct": 10, "temperature_c": -8.0},
+    {"timestamp_local": "2026-01-01T06:55:00-06:00", "sky_cover_pct": 25, "temperature_c": -10.0},
+    {"timestamp_local": "2026-01-01T12:55:00-06:00", "sky_cover_pct": 40, "temperature_c": -3.0},
+    {"timestamp_local": "2026-01-01T18:55:00-06:00", "sky_cover_pct": 15, "temperature_c": -6.0}
+  ],
+  "readings_available": 4,
+  "recorded_at_utc": "2026-01-02T00:20:00.000000+00:00"
+}

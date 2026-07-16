@@ -1,21 +1,19 @@
 version: 1
 current_status:
-  last_updated: "2026-07-16T23:20:00Z"
-  phase: spp_load_vertical_slice_complete
+  last_updated: "2026-07-16T23:45:00Z"
+  phase: household_bridges_and_residentai_tool_complete
   branch: feature/mvp-bootstrap-v1
   summary: >
-    Repository located (GitHub, deboerja/PowerPipeline), control-plane docs
-    and implementation-tracking files written, existing ResidentAI
-    components (Enphase, weather) inventoried for reuse, and SPP public data
-    sources validated live. One open item (renewable forecast-vs-actual
-    dataset) recorded as a non-blocking gap. A full working vertical slice
-    for SPP load ingestion is built and tested: raw landing, schema
-    validation/quarantine, UTC normalization, DuckDB curated table + accuracy
-    view, idempotent upsert, and missing-interval detection — 13 automated
-    tests passing plus one live smoke test against the real SPP endpoint
-    (386 real records ingested, zero rejected). Household bridges,
-    ResidentAI operations, scheduling, and real /srv deployment on Odin are
-    not yet built.
+    Full working slices now exist for: SPP load ingestion (mtlf-vs-actual),
+    Enphase household solar bridge, weather actual bridge, household solar
+    forecast bridge, and the ResidentAI read-only tool with 8 named
+    operations. 31 automated tests passing, ruff clean, plus a live smoke
+    test against the real SPP endpoint. The ResidentAI tool's SQL-rejection
+    and write-rejection guarantees are verified structurally (DuckDB itself
+    raises on writes against the read_only connection; no query/sql method
+    exists on the class). One open item remains: the public SPP renewable
+    forecast-vs-actual dataset (bl-001), honestly surfaced as
+    "not_available" rather than faked when ResidentAI asks for it.
 
   completed_phases:
     - repository_discovery
@@ -24,19 +22,16 @@ current_status:
     - reusable_component_discovery
     - spp_source_validation
     - spp_load_ingestion_vertical_slice
+    - household_bridges_enphase_weather_solar_forecast
+    - residentai_readonly_tool
 
-  in_progress_phase: household_bridges_and_residentai_operations
+  in_progress_phase: scheduling_templates_and_interview_demo
 
   not_started:
-    - enphase_fixture_and_bridge
-    - weather_fixture_and_bridge
-    - household_solar_forecast_integration
-    - household_forecast_accuracy_view_validation
     - bounded_backfill_from_watermark
     - retry_logic
-    - structured_json_logging
+    - structured_json_logging_beyond_residentai_audit
     - scheduling_templates
-    - residentai_read_operations
     - runtime_deployment
     - residentai_registration
     - interview_report_and_demo_script
@@ -46,19 +41,32 @@ current_status:
 
   test_evidence:
     suite: pytest tests/
-    result: "13 passed"
+    result: "31 passed"
     lint: "ruff check src/ tests/ — clean"
     live_smoke_test: "2026-07-16 — real GET against portal.spp.org/file-browser-api/download/mtlf-vs-actual for 2026-07-16; 386/386 records accepted, 0 rejected, 0 quarantined"
+    residentai_tool_security_evidence: >
+      test_underlying_connection_is_read_only_and_rejects_writes confirms
+      DuckDB raises on DELETE/DROP/INSERT against the tool's connection;
+      test_no_arbitrary_sql_method_exists confirms no query/execute/sql
+      method exists on the class at all.
 
   checkpoints_awaiting_user_go_ahead:
     - deploying to /srv on Odin
     - wiring real Enphase/weather credentials into PowerPipeline code
     - restarting any ResidentAI/OpenWebUI component
     - registering the ResidentAI-facing interface for real use
+    note: >
+      Household bridges above read from real curated JSON files on disk
+      (no credentials required -- see docs/EXISTING_COMPONENT_REUSE.md) so
+      building/testing them against sanitized fixtures did not require
+      crossing any checkpoint. Reading the real /srv/apps/resident-ai/
+      runtime/ paths directly (rather than fixtures) for a live smoke test,
+      or deploying/scheduling/registering for real, still requires the
+      go-ahead above.
 
   git:
-    working_tree: clean_as_of_last_commit
+    working_tree: pending_next_commit
     remote: https://github.com/deboerja/PowerPipeline.git
     default_branch: main
     current_branch: feature/mvp-bootstrap-v1
-    pushed: pending_first_push
+    pushed: partially — see EXECUTION_HISTORY.yaml for latest commit hash

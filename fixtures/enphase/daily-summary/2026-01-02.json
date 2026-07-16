@@ -1,0 +1,14 @@
+{
+  "date": "2026-01-02",
+  "system": "home-solar",
+  "solar_production_kwh": 9.8,
+  "source_record_count": 96,
+  "accepted_record_count": 90,
+  "rejected_record_count": 6,
+  "duplicate_record_count": 0,
+  "expected_record_count": 96,
+  "completeness_pct": 93.75,
+  "data_status": "partial",
+  "source": "enphase_monitoring_api",
+  "ingested_at": "2026-01-03T01:00:11.000000+00:00"
+}

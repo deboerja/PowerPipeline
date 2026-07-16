@@ -1,0 +1,17 @@
+{
+  "generated_at_utc": "2026-01-01T15:00:00.000000+00:00",
+  "model_version": "v1_physics_clearsky_calibrated",
+  "location": {
+    "station": "KMDS",
+    "latitude": 44.0164,
+    "longitude": -97.0855
+  },
+  "calibration_status": "calibrated",
+  "calibration_pairs_considered": 30,
+  "projection_days": [
+    {"date": "2026-01-02", "expected_units_w_m2h": 1050.0, "hours_in_forecast": 24, "projected_kwh": 10.5},
+    {"date": "2026-01-03", "expected_units_w_m2h": 1100.0, "hours_in_forecast": 24, "projected_kwh": 11.0},
+    {"date": "2026-01-04", "expected_units_w_m2h": 1480.0, "hours_in_forecast": 24, "projected_kwh": 14.8},
+    {"date": "2026-01-05", "expected_units_w_m2h": 1200.0, "hours_in_forecast": 24, "projected_kwh": 12.0}
+  ]
+}

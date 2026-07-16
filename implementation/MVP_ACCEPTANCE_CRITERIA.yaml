@@ -24,10 +24,12 @@ mvp_acceptance_criteria:
       note: dataset not yet located, see docs/SOURCE_REGISTRY.md and implementation/BLOCKERS.yaml bl-001
     - id: src-04
       criterion: Existing Enphase data is available in curated form
-      status: not_met
+      status: met_in_dev
+      evidence: "src/powerpipeline/ingest/enphase_bridge.py; tests/test_household_bridges.py::test_enphase_bridge_ingests_curated_summaries; fact_household_solar populated"
     - id: src-05
       criterion: Existing weather data is available in curated form
-      status: not_met
+      status: met_in_dev
+      evidence: "src/powerpipeline/ingest/weather_bridge.py; tests/test_household_bridges.py::test_weather_bridge_ingests_and_aggregates_daily; fact_weather_actual populated"
 
   storage:
     - id: stg-01
@@ -84,13 +86,16 @@ mvp_acceptance_criteria:
   analytics:
     - id: ana-01
       criterion: Household solar history is queryable
-      status: not_met
+      status: met_in_dev
+      evidence: "read_household_solar_history in src/powerpipeline/residentai_tool.py; tests/test_residentai_tool.py::test_household_solar_history_works"
     - id: ana-02
       criterion: Household solar forecast is queryable
-      status: not_met
+      status: met_in_dev
+      evidence: "read_household_solar_forecast in src/powerpipeline/residentai_tool.py; fact_household_solar_forecast populated via wq-20"
     - id: ana-03
       criterion: Household forecast accuracy is calculated
-      status: not_met
+      status: met_in_dev
+      evidence: "v_household_solar_forecast_accuracy + read_household_forecast_accuracy; tests/test_household_bridges.py::test_household_forecast_accuracy_view_joins_actual_and_forecast"
     - id: ana-04
       criterion: SPP load forecast accuracy is calculated
       status: met_in_dev
@@ -103,19 +108,24 @@ mvp_acceptance_criteria:
   residentai:
     - id: rai-01
       criterion: Named read-only operations work
-      status: not_met
+      status: met_in_dev
+      evidence: "src/powerpipeline/residentai_tool.py; tests/test_residentai_tool.py (11 tests)"
     - id: rai-02
       criterion: Arbitrary SQL is rejected
-      status: not_met
+      status: met_in_dev
+      evidence: "test_no_arbitrary_sql_method_exists — structural: no query/execute/sql method exists on the class at all"
     - id: rai-03
       criterion: Writes are rejected
-      status: not_met
+      status: met_in_dev
+      evidence: "test_underlying_connection_is_read_only_and_rejects_writes — DuckDB itself raises on DELETE/DROP/INSERT against the read_only=True connection"
     - id: rai-04
       criterion: Range limits are enforced
-      status: not_met
+      status: met_in_dev
+      evidence: "test_date_range_exceeding_maximum_rejected, test_inverted_date_range_rejected, test_malformed_date_rejected; MAX_ROWS also enforced via SQL LIMIT"
     - id: rai-05
       criterion: Results include provenance, freshness, and quality
-      status: not_met
+      status: met_in_dev
+      evidence: "test_named_operation_returns_provenance_and_quality_metadata — every result includes source, observation_period, ingestion_timestamp, quality_status, known_limitations"
 
   operations:
     - id: ops-01
@@ -161,11 +171,14 @@ mvp_acceptance_criteria:
 
   overall_status: in_progress
   overall_note: >
-    Control-plane, documentation, and a full vertical slice for SPP load
-    ingestion (contract -> raw -> normalize -> quarantine -> DuckDB curated
-    -> accuracy view) are built and passing 13 automated tests plus one live
-    smoke test against the real SPP endpoint. Household bridges (Enphase,
-    weather), ResidentAI operations, scheduling, and real /srv deployment on
-    Odin are not yet built. Do not report MVP completion until every
-    non-blocked item above is "met" (not "met_in_dev") with cited evidence
-    from the deployed system.
+    Control-plane, documentation, SPP load ingestion, Enphase/weather/
+    household-solar-forecast bridges, and the ResidentAI read-only tool are
+    all built and passing 31 automated tests plus one live smoke test
+    against the real SPP endpoint. Remaining before "met" (not "met_in_dev")
+    can be claimed: bounded backfill from watermark, retry logic, structured
+    JSON logging beyond the residentai_tool audit log, scheduling templates
+    installed and running, real /srv deployment on Odin, ResidentAI
+    interface registration, the interview demo script, and end-to-end
+    validation against the deployed system (wq-29). Do not report MVP
+    completion until every non-blocked item above is "met" with cited
+    evidence from the deployed system.

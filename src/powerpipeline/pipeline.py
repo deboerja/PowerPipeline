@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 import duckdb
 
 from powerpipeline import db
-from powerpipeline.ingest import spp_load
+from powerpipeline.ingest import enphase_bridge, household_solar_forecast_bridge, spp_load, weather_bridge
 
 SOURCE_NAME = "spp_mtlf"
 
@@ -108,6 +109,188 @@ def _upsert_normalized(
         """,
         [source_file, run_id],
     )
+
+
+def _record_run(
+    con: duckdb.DuckDBPyConnection,
+    run_id: str,
+    source: str,
+    started_at: datetime,
+    finished_at: datetime,
+    status: str,
+    records_in: int,
+    records_accepted: int,
+    records_rejected: int,
+    watermark_after: str,
+) -> None:
+    con.execute(
+        """
+        INSERT INTO pipeline_runs
+            (run_id, source, started_at, finished_at, status,
+             records_in, records_accepted, records_quarantined,
+             watermark_before, watermark_after)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [run_id, source, started_at, finished_at, status, records_in, records_accepted,
+         records_rejected, None, watermark_after],
+    )
+    con.execute(
+        """
+        INSERT INTO source_freshness (source, last_success_at, last_attempt_at, current_watermark, status)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT (source) DO UPDATE SET
+            last_success_at = excluded.last_success_at,
+            last_attempt_at = excluded.last_attempt_at,
+            current_watermark = excluded.current_watermark,
+            status = excluded.status
+        """,
+        [source, finished_at if status == "success" else None, finished_at, watermark_after,
+         "fresh" if status == "success" else "failing"],
+    )
+
+
+def run_enphase_bridge(snapshots_dir: Path) -> dict:
+    run_id = str(uuid.uuid4())
+    started_at = datetime.now(timezone.utc)
+    normalized, rejected = enphase_bridge.ingest_directory(snapshots_dir)
+    con = db.init_db()
+    status = "success"
+    try:
+        if normalized is not None and len(normalized):
+            con.execute(
+                """
+                INSERT INTO fact_household_solar
+                    (date, solar_production_kwh, completeness_pct, data_status,
+                     source_file, ingested_at, pipeline_run_id)
+                SELECT date, solar_production_kwh, completeness_pct, data_status,
+                       source_file, now(), ?
+                FROM normalized
+                ON CONFLICT (date) DO UPDATE SET
+                    solar_production_kwh = excluded.solar_production_kwh,
+                    completeness_pct = excluded.completeness_pct,
+                    data_status = excluded.data_status,
+                    source_file = excluded.source_file,
+                    ingested_at = excluded.ingested_at,
+                    pipeline_run_id = excluded.pipeline_run_id
+                """,
+                [run_id],
+            )
+    except Exception:
+        status = "failed"
+        raise
+    finally:
+        finished_at = datetime.now(timezone.utc)
+        records_in = (len(normalized) if normalized is not None else 0) + (
+            len(rejected) if rejected is not None else 0
+        )
+        _record_run(
+            con, run_id, "enphase_household_solar", started_at, finished_at, status,
+            records_in, len(normalized) if normalized is not None else 0,
+            len(rejected) if rejected is not None else 0,
+            str(finished_at.date()),
+        )
+        con.close()
+    return {
+        "run_id": run_id,
+        "status": status,
+        "records_accepted": len(normalized) if normalized is not None else 0,
+        "records_rejected": len(rejected) if rejected is not None else 0,
+    }
+
+
+def run_weather_bridge(snapshots_dir: Path) -> dict:
+    run_id = str(uuid.uuid4())
+    started_at = datetime.now(timezone.utc)
+    normalized, rejected = weather_bridge.ingest_directory(snapshots_dir)
+    con = db.init_db()
+    status = "success"
+    try:
+        if normalized is not None and len(normalized):
+            con.execute(
+                """
+                INSERT INTO fact_weather_actual
+                    (date, station, avg_temperature_c, avg_sky_cover_pct,
+                     source_file, ingested_at, pipeline_run_id)
+                SELECT date, station, avg_temperature_c, avg_sky_cover_pct,
+                       source_file, now(), ?
+                FROM normalized
+                ON CONFLICT (date, station) DO UPDATE SET
+                    avg_temperature_c = excluded.avg_temperature_c,
+                    avg_sky_cover_pct = excluded.avg_sky_cover_pct,
+                    source_file = excluded.source_file,
+                    ingested_at = excluded.ingested_at,
+                    pipeline_run_id = excluded.pipeline_run_id
+                """,
+                [run_id],
+            )
+    except Exception:
+        status = "failed"
+        raise
+    finally:
+        finished_at = datetime.now(timezone.utc)
+        records_in = (len(normalized) if normalized is not None else 0) + (
+            len(rejected) if rejected is not None else 0
+        )
+        _record_run(
+            con, run_id, "weather_actual", started_at, finished_at, status,
+            records_in, len(normalized) if normalized is not None else 0,
+            len(rejected) if rejected is not None else 0,
+            str(finished_at.date()),
+        )
+        con.close()
+    return {
+        "run_id": run_id,
+        "status": status,
+        "records_accepted": len(normalized) if normalized is not None else 0,
+        "records_rejected": len(rejected) if rejected is not None else 0,
+    }
+
+
+def run_household_solar_forecast_bridge(source_path: Path) -> dict:
+    run_id = str(uuid.uuid4())
+    started_at = datetime.now(timezone.utc)
+    normalized, rejected = household_solar_forecast_bridge.ingest_file(source_path)
+    con = db.init_db()
+    status = "success"
+    try:
+        if normalized is not None and len(normalized):
+            con.execute(
+                """
+                INSERT INTO fact_household_solar_forecast
+                    (forecast_for_date, captured_at_utc, forecast_kwh,
+                     source_file, ingested_at, pipeline_run_id)
+                SELECT forecast_for_date, captured_at_utc, forecast_kwh,
+                       source_file, now(), ?
+                FROM normalized
+                ON CONFLICT (forecast_for_date, captured_at_utc) DO UPDATE SET
+                    forecast_kwh = excluded.forecast_kwh,
+                    source_file = excluded.source_file,
+                    ingested_at = excluded.ingested_at,
+                    pipeline_run_id = excluded.pipeline_run_id
+                """,
+                [run_id],
+            )
+    except Exception:
+        status = "failed"
+        raise
+    finally:
+        finished_at = datetime.now(timezone.utc)
+        records_in = (len(normalized) if normalized is not None else 0) + (
+            len(rejected) if rejected is not None else 0
+        )
+        _record_run(
+            con, run_id, "household_solar_forecast", started_at, finished_at, status,
+            records_in, len(normalized) if normalized is not None else 0,
+            len(rejected) if rejected is not None else 0,
+            str(finished_at.date()),
+        )
+        con.close()
+    return {
+        "run_id": run_id,
+        "status": status,
+        "records_accepted": len(normalized) if normalized is not None else 0,
+        "records_rejected": len(rejected) if rejected is not None else 0,
+    }
 
 
 def _record_completeness_check(con: duckdb.DuckDBPyConnection, run_id: str) -> None:

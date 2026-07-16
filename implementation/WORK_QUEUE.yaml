@@ -82,9 +82,9 @@ work_queue:
       acceptance_criteria: offline demo can run without network access
       risk: low
       runtime_impact: none
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "fixtures/spp/mtlf (real public data, no sensitivity concern), fixtures/enphase/daily-summary, fixtures/weather/daily-actual, fixtures/solar_forecast (synthetic values, real schema -- household fixtures deliberately not real numbers per the no-unsanitized-telemetry boundary); all consumed by passing tests"
       blocker_ref: null
 
     - id: wq-07
@@ -180,9 +180,9 @@ work_queue:
       acceptance_criteria: household solar history queryable in curated layer
       risk: low
       runtime_impact: read-only access to existing files, no writes to Enphase's own tree
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "src/powerpipeline/ingest/enphase_bridge.py + contracts/enphase_summary.py; tests/test_household_bridges.py, test_household_contracts.py"
       blocker_ref: null
 
     - id: wq-14
@@ -194,9 +194,9 @@ work_queue:
       acceptance_criteria: weather actual + forecast queryable in curated layer
       risk: low
       runtime_impact: read-only
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "src/powerpipeline/ingest/weather_bridge.py + contracts/weather_actual.py; daily aggregation tested"
       blocker_ref: null
 
     - id: wq-15
@@ -278,9 +278,9 @@ work_queue:
       acceptance_criteria: household solar forecast queryable
       risk: low
       runtime_impact: none
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "src/powerpipeline/ingest/household_solar_forecast_bridge.py; fact_household_solar_forecast populated and tested"
       blocker_ref: null
 
     - id: wq-21
@@ -292,9 +292,9 @@ work_queue:
       acceptance_criteria: MAPE/bias computed correctly against hand-checked fixture
       risk: low
       runtime_impact: none
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "v_household_solar_forecast_accuracy validated via test_household_forecast_accuracy_view_joins_actual_and_forecast; v_spp_load_forecast_accuracy already covered by wq-17"
       blocker_ref: null
 
     - id: wq-22
@@ -334,9 +334,9 @@ work_queue:
       acceptance_criteria: named ops work, arbitrary SQL/writes structurally impossible
       risk: medium
       runtime_impact: none until registered — behind agent checkpoint
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "src/powerpipeline/residentai_tool.py; 11 tests in test_residentai_tool.py including structural SQL/write rejection"
       blocker_ref: null
 
     - id: wq-25

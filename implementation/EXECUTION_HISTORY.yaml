@@ -47,3 +47,37 @@ execution_history:
       (not a fixture) for 2026-07-16's OP-MTLF file: 386/386 records
       accepted, 0 rejected. Confirms the ingestion code works against
       production data, not just fixtures.
+
+  - timestamp: "2026-07-16T23:19:00Z"
+    event: feature_branch_pushed
+    detail: "git push -u origin feature/mvp-bootstrap-v1 (commit fbe24b7)"
+
+  - timestamp: "2026-07-16T23:35:00Z"
+    event: household_bridges_implemented
+    detail: >
+      Sanitized fixtures created for Enphase daily-summary, weather
+      daily-actual, and household solar forecast (synthetic values, real
+      schema, deliberately not real household numbers per the
+      no-unsanitized-telemetry boundary). Implemented
+      src/powerpipeline/contracts/{enphase_summary,weather_actual,
+      household_solar_forecast}.py and
+      src/powerpipeline/ingest/{enphase_bridge,weather_bridge,
+      household_solar_forecast_bridge}.py, plus three new pipeline.py
+      orchestration functions. 9 new tests across
+      tests/test_household_bridges.py and tests/test_household_contracts.py,
+      all passing; ruff clean.
+
+  - timestamp: "2026-07-16T23:42:00Z"
+    event: residentai_tool_implemented
+    detail: >
+      src/powerpipeline/residentai_tool.py with 8 named operations
+      (read_household_solar_history, read_household_solar_forecast,
+      read_household_forecast_accuracy, read_spp_load_conditions,
+      read_spp_load_forecast_accuracy, read_spp_renewable_conditions
+      [honestly reports not_available], read_pipeline_health,
+      read_data_quality_summary). 11 tests in test_residentai_tool.py,
+      including structural verification that DuckDB's read_only=True
+      connection rejects DELETE/DROP/INSERT and that no query/sql method
+      exists on the class at all. 31 tests total, all passing; ruff clean.
+      Not registered with OpenWebUI/ResidentAI -- that stays behind the
+      deployment checkpoint.
