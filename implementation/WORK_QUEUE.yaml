@@ -1,0 +1,438 @@
+version: 1
+work_queue:
+  branch: feature/mvp-bootstrap-v1
+
+  items:
+    - id: wq-01
+      objective: Locate and validate PowerPipeline repository
+      scope: [repo]
+      dependencies: []
+      expected_outputs: [confirmed repo, remote, branch, credentials]
+      tests: [git ls-remote / clone / credential check]
+      acceptance_criteria: repo cloned locally, push credentials confirmed present
+      risk: low
+      runtime_impact: none
+      status: completed
+      commit: ""
+      validation_evidence: "cloned deboerja/PowerPipeline; git credential fill returned a usable token"
+      blocker_ref: null
+
+    - id: wq-02
+      objective: Establish durable project control plane
+      scope: [repo]
+      dependencies: [wq-01]
+      expected_outputs: [docs/, implementation/, contracts/, src/, sql/, tests/, scripts/, config/, fixtures/, reports/, deployment/ directories]
+      tests: [directory structure exists]
+      acceptance_criteria: structure matches docs/ARCHITECTURE.md and CLAUDE.md expectations
+      risk: low
+      runtime_impact: none
+      status: in_progress
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-03
+      objective: Record the autonomy profile
+      scope: [repo]
+      dependencies: [wq-02]
+      expected_outputs: [docs/MVP_AUTONOMY_PROFILE.md, implementation/MVP_AUTONOMY_PROFILE.yaml]
+      tests: [manual review]
+      acceptance_criteria: exception scope, relaxations, boundaries, and agent-imposed checkpoints all recorded
+      risk: low
+      runtime_impact: none
+      status: completed
+      commit: ""
+      validation_evidence: "both files written"
+      blocker_ref: null
+
+    - id: wq-04
+      objective: Discover reusable components
+      scope: [repo]
+      dependencies: []
+      expected_outputs: [docs/EXISTING_COMPONENT_REUSE.md]
+      tests: [manual review against actual homelab/scripts source]
+      acceptance_criteria: Enphase, weather, ResidentAI wrapper, scheduling, secrets, HA, runtime-layout conventions all documented with file paths
+      risk: low
+      runtime_impact: none
+      status: completed
+      commit: ""
+      validation_evidence: "Explore-agent inventory cross-checked and written into docs/EXISTING_COMPONENT_REUSE.md"
+      blocker_ref: null
+
+    - id: wq-05
+      objective: Validate SPP public sources
+      scope: [repo]
+      dependencies: []
+      expected_outputs: [docs/SOURCE_REGISTRY.md]
+      tests: [live HTTP probes against portal.spp.org]
+      acceptance_criteria: at least one load and one load-forecast-vs-actual dataset confirmed reachable and downloadable
+      risk: low
+      runtime_impact: none
+      status: completed
+      commit: ""
+      validation_evidence: "mtlf-vs-actual and stlf-vs-actual and generation-mix-historical confirmed via curl; renewable forecast-vs-actual not located, recorded as open item"
+      blocker_ref: bl-001
+
+    - id: wq-06
+      objective: Capture sanitized fixtures
+      scope: [repo]
+      dependencies: [wq-05]
+      expected_outputs: [fixtures/spp/, fixtures/enphase/, fixtures/weather/]
+      tests: [fixtures parse under the same contracts as live data]
+      acceptance_criteria: offline demo can run without network access
+      risk: low
+      runtime_impact: none
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-07
+      objective: Build project skeleton
+      scope: [repo]
+      dependencies: [wq-02]
+      expected_outputs: [pyproject.toml, src/powerpipeline package layout]
+      tests: [package imports, pytest collects]
+      acceptance_criteria: python -m powerpipeline runs without error
+      risk: low
+      runtime_impact: none
+      status: completed
+      commit: ""
+      validation_evidence: "pyproject.toml + src/powerpipeline package; pip install -e .[dev] succeeds; pytest collects"
+      blocker_ref: null
+
+    - id: wq-08
+      objective: Implement data contracts
+      scope: [repo]
+      dependencies: [wq-07]
+      expected_outputs: [contracts/ Pandera/Pydantic schemas for each source]
+      tests: [contract unit tests, valid/invalid fixture cases]
+      acceptance_criteria: invalid records demonstrably rejected by contract validation
+      risk: low
+      runtime_impact: none
+      status: completed
+      commit: ""
+      validation_evidence: "src/powerpipeline/contracts/spp_mtlf.py; tests/test_spp_mtlf_contract.py (4 tests passing)"
+      blocker_ref: null
+
+    - id: wq-09
+      objective: Implement raw landing
+      scope: [repo, runtime]
+      dependencies: [wq-08]
+      expected_outputs: [raw landing writer, immutable file naming]
+      tests: [idempotent re-write test, immutability test]
+      acceptance_criteria: re-running ingestion never overwrites a prior raw file
+      risk: low
+      runtime_impact: local filesystem only until deployed
+      status: completed
+      commit: ""
+      validation_evidence: "src/powerpipeline/ingest/spp_load.py land_raw(); immutability tested"
+      blocker_ref: null
+
+    - id: wq-10
+      objective: Implement SPP load ingestion (mtlf-vs-actual)
+      scope: [repo]
+      dependencies: [wq-09]
+      expected_outputs: [src/powerpipeline/ingest/spp_load.py]
+      tests: [fixture-based ingestion test, live smoke test against real endpoint]
+      acceptance_criteria: hourly load + forecast-vs-actual rows land in normalized layer
+      risk: medium
+      runtime_impact: none until scheduled
+      status: completed
+      commit: ""
+      validation_evidence: "src/powerpipeline/ingest/spp_load.py + pipeline.py; 13 tests passing; live smoke test 2026-07-16 (386 real records)"
+      blocker_ref: null
+
+    - id: wq-11
+      objective: Implement SPP load forecast ingestion
+      scope: [repo]
+      dependencies: [wq-10]
+      expected_outputs: covered by wq-10 (single dataset serves both)
+      tests: []
+      acceptance_criteria: n/a — merged into wq-10, see docs/SOURCE_REGISTRY.md
+      risk: low
+      runtime_impact: none
+      status: merged_into_wq-10
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-12
+      objective: Implement SPP renewable forecast ingestion
+      scope: [repo]
+      dependencies: [wq-05]
+      expected_outputs: [src/powerpipeline/ingest/spp_renewable.py]
+      tests: []
+      acceptance_criteria: BLOCKED pending dataset location, see bl-001
+      risk: medium
+      runtime_impact: none
+      status: blocked
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: bl-001
+
+    - id: wq-13
+      objective: Bridge Enphase data
+      scope: [repo]
+      dependencies: [wq-08]
+      expected_outputs: [src/powerpipeline/ingest/enphase_bridge.py]
+      tests: [fixture-based test using sanitized enphase daily-summary sample]
+      acceptance_criteria: household solar history queryable in curated layer
+      risk: low
+      runtime_impact: read-only access to existing files, no writes to Enphase's own tree
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-14
+      objective: Bridge weather data
+      scope: [repo]
+      dependencies: [wq-08]
+      expected_outputs: [src/powerpipeline/ingest/weather_bridge.py]
+      tests: [fixture-based test]
+      acceptance_criteria: weather actual + forecast queryable in curated layer
+      risk: low
+      runtime_impact: read-only
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-15
+      objective: Normalize timestamps
+      scope: [repo]
+      dependencies: [wq-10, wq-13, wq-14]
+      expected_outputs: [shared UTC-normalization + explicit local-time helper]
+      tests: [DST-boundary test cases]
+      acceptance_criteria: no naive timestamps anywhere in normalized layer
+      risk: medium
+      runtime_impact: none
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-16
+      objective: Build DuckDB schema
+      scope: [repo]
+      dependencies: [wq-15]
+      expected_outputs: [sql/schema.sql]
+      tests: [schema applies cleanly to a fresh file]
+      acceptance_criteria: fact + metadata tables created, constraints enforced
+      risk: low
+      runtime_impact: none until deployed
+      status: completed
+      commit: ""
+      validation_evidence: "sql/schema.sql; 6 tables; applied via powerpipeline.db.init_db()"
+      blocker_ref: null
+
+    - id: wq-17
+      objective: Build curated views
+      scope: [repo]
+      dependencies: [wq-16]
+      expected_outputs: [sql/views.sql]
+      tests: [view query tests against fixture-loaded data]
+      acceptance_criteria: forecast-vs-actual accuracy views return correct metrics on known fixture data
+      risk: low
+      runtime_impact: none
+      status: partial
+      commit: ""
+      validation_evidence: "v_spp_load_forecast_accuracy tested (tests/test_pipeline_curated.py); v_household_solar_forecast_accuracy defined in sql/views.sql but untested — no household data flowing yet (wq-13, wq-20 pending)"
+      blocker_ref: null
+
+    - id: wq-18
+      objective: Implement idempotency and watermarks
+      scope: [repo]
+      dependencies: [wq-16]
+      expected_outputs: [watermark tracking in pipeline_runs]
+      tests: [re-run-produces-no-duplicates test]
+      acceptance_criteria: see docs/FAILURE_SCENARIOS.md #1
+      risk: medium
+      runtime_impact: none
+      status: partial
+      commit: ""
+      validation_evidence: "upsert idempotency tested (test_rerun_is_idempotent_no_duplicate_curated_rows); watermark recorded in source_freshness but not yet used to bound an incremental re-fetch range — see MVP_ACCEPTANCE_CRITERIA.yaml prc-06"
+      blocker_ref: null
+
+    - id: wq-19
+      objective: Implement quality checks and quarantine
+      scope: [repo]
+      dependencies: [wq-08, wq-16]
+      expected_outputs: [completeness/range/freshness checks, quarantine writer]
+      tests: [docs/FAILURE_SCENARIOS.md #2, #3]
+      acceptance_criteria: invalid records never reach curated tables
+      risk: medium
+      runtime_impact: none
+      status: partial
+      commit: ""
+      validation_evidence: "quarantine + missing-interval completeness check implemented and tested (tests/test_spp_mtlf_contract.py, tests/test_missing_interval_detection.py); retry logic and bounded backfill (docs/FAILURE_SCENARIOS.md #4) not yet implemented"
+      blocker_ref: null
+
+    - id: wq-20
+      objective: Integrate household solar forecast
+      scope: [repo]
+      dependencies: [wq-14]
+      expected_outputs: [fact_household_solar_forecast table populated]
+      tests: [fixture test]
+      acceptance_criteria: household solar forecast queryable
+      risk: low
+      runtime_impact: none
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-21
+      objective: Calculate forecast accuracy
+      scope: [repo]
+      dependencies: [wq-17, wq-20]
+      expected_outputs: [accuracy views for SPP load and household solar]
+      tests: [known-fixture accuracy value tests]
+      acceptance_criteria: MAPE/bias computed correctly against hand-checked fixture
+      risk: low
+      runtime_impact: none
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-22
+      objective: Implement pipeline observability
+      scope: [repo]
+      dependencies: [wq-18, wq-19]
+      expected_outputs: [structured JSON logging, pipeline_runs/data_quality_results population]
+      tests: [log format test]
+      acceptance_criteria: read_pipeline_health / read_data_quality_summary return real data
+      risk: low
+      runtime_impact: none
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-23
+      objective: Implement scheduling
+      scope: [runtime]
+      dependencies: [wq-10, wq-13, wq-14]
+      expected_outputs: [systemd .service/.timer templates under deployment/systemd/]
+      tests: [dry-run / systemd-analyze verify]
+      acceptance_criteria: templates valid; not yet installed (checkpoint)
+      risk: medium
+      runtime_impact: real once installed — behind agent checkpoint
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-24
+      objective: Implement ResidentAI read operations
+      scope: [repo]
+      dependencies: [wq-17]
+      expected_outputs: [src/powerpipeline/residentai_tool.py]
+      tests: [docs/FAILURE_SCENARIOS.md #6]
+      acceptance_criteria: named ops work, arbitrary SQL/writes structurally impossible
+      risk: medium
+      runtime_impact: none until registered — behind agent checkpoint
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-25
+      objective: Deploy isolated runtime
+      scope: [runtime]
+      dependencies: [wq-16, wq-23]
+      expected_outputs: ["/srv/powerpipeline/ on Odin, docker-compose.yml"]
+      tests: [health check passes]
+      acceptance_criteria: services running, isolated, no port conflicts
+      risk: high
+      runtime_impact: real — behind agent checkpoint, requires user go-ahead
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-26
+      objective: Register ResidentAI integration
+      scope: [residentai]
+      dependencies: [wq-24, wq-25]
+      expected_outputs: [OpenWebUI tool registered, minimal restart]
+      tests: [live query test]
+      acceptance_criteria: works end to end, disable/rollback path verified
+      risk: high
+      runtime_impact: real — behind agent checkpoint, requires user go-ahead
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-27
+      objective: Build interview report/dashboard
+      scope: [repo]
+      dependencies: [wq-21, wq-22]
+      expected_outputs: [reports/ generated HTML]
+      tests: [manual visual check]
+      acceptance_criteria: readable by a non-engineer
+      risk: low
+      runtime_impact: none
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-28
+      objective: Build failure-and-recovery demonstration
+      scope: [repo]
+      dependencies: [wq-19]
+      expected_outputs: [docs/FAILURE_SCENARIOS.md scenarios runnable via demo script]
+      tests: [all 6 scenarios pass]
+      acceptance_criteria: see docs/FAILURE_SCENARIOS.md
+      risk: low
+      runtime_impact: none
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-29
+      objective: Run end-to-end validation
+      scope: [repo, runtime]
+      dependencies: [wq-25, wq-26, wq-28]
+      expected_outputs: [full acceptance-criteria run]
+      tests: [implementation/MVP_ACCEPTANCE_CRITERIA.yaml, all items]
+      acceptance_criteria: all required criteria pass against the deployed system
+      risk: medium
+      runtime_impact: none (validation only)
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-30
+      objective: Merge and tag MVP release
+      scope: [repo]
+      dependencies: [wq-29]
+      expected_outputs: [merged main, git tag]
+      tests: [full regression suite]
+      acceptance_criteria: clean tree, tests pass, secret scan pass
+      risk: low
+      runtime_impact: none
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null
+
+    - id: wq-31
+      objective: Produce final handoff
+      scope: [repo]
+      dependencies: [wq-30]
+      expected_outputs: [handoff summary per instruction §25]
+      tests: []
+      acceptance_criteria: matches actual deployed/validated state, not aspirational
+      risk: low
+      runtime_impact: none
+      status: pending
+      commit: ""
+      validation_evidence: ""
+      blocker_ref: null

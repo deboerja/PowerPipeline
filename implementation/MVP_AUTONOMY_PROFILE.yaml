@@ -1,0 +1,91 @@
+version: 1
+autonomy_profile:
+  project: PowerPipeline
+  granted_by: user (deboerja)
+  granted_at: "2026-07-16"
+  status: active
+  narrative_doc: docs/MVP_AUTONOMY_PROFILE.md
+
+  scope:
+    included:
+      - repo: deboerja/PowerPipeline (GitHub)
+      - runtime: approved PowerPipeline runtime directory under /srv on Odin
+      - services: dedicated PowerPipeline Docker Compose stack or isolated systemd units
+      - data: PowerPipeline-created databases, files, logs, schedules, reports
+      - interface: bounded read-only PowerPipeline interface for ResidentAI
+      - source: public Southwest Power Pool data
+      - source: existing approved Enphase and weather data paths
+    excluded:
+      - general Odin authority
+      - ResidentAI as a whole
+      - Home Assistant
+      - energy equipment
+      - unrelated repositories
+      - unrelated services
+
+  relaxed_controls:
+    - per_slice_residentai_canon_packages
+    - human_approval_after_every_branch_commit_test
+    - formal_approval_before_routine_architecture_decisions
+    - full_toolrunner_audit_integration_during_early_dev
+    - formal_change_tickets
+    - maintenance_window_requirements
+    - multi_person_review
+    - enterprise_rbac
+    - high_availability
+    - database_replication
+    - geographic_disaster_recovery
+    - formal_data_catalog_software
+    - full_observability_platform
+    - multi_source_reconciliation_as_release_gate
+    - formal_model_registry
+    - automated_model_governance_workflow
+    - full_retention_policy_implementation
+    - separate_approval_for_runtime_directory_creation
+    - separate_approval_for_service_deploy_or_restart
+    - separate_approval_for_schedule_creation
+    - separate_approval_for_residentai_interface_registration
+    - separate_approval_for_merge_to_default_branch
+
+  non_negotiable_boundaries:
+    - no_franklinwh_access_attempts
+    - no_private_or_authenticated_spp_access
+    - no_credential_extraction_outside_scope
+    - no_equipment_control
+    - no_home_assistant_state_changing_calls
+    - no_dispatch_or_market_bidding
+    - residentai_no_arbitrary_sql
+    - residentai_no_write_access
+    - residentai_no_shell_or_filesystem_or_secret_access
+    - no_actions_outside_powerpipeline_scope_affecting_unrelated_systems
+    - no_firewalla_dns_proxy_or_auth_infra_changes
+    - no_internet_exposed_ports
+    - no_committed_secrets
+    - no_fabricated_data_or_hidden_validation_failures
+    - no_silent_eia930_substitution_for_spp
+    - no_completion_claims_without_meeting_acceptance_criteria
+
+  agent_imposed_checkpoints:
+    description: >
+      Additional pause-and-confirm points the implementing agent chose to keep
+      despite being told these are pre-authorized, because they are hard to
+      reverse and/or touch shared or running state beyond this repo.
+    items:
+      - deploying any container or systemd service to Odin under /srv
+      - wiring real Enphase/weather credentials into PowerPipeline code paths
+      - restarting any ResidentAI or OpenWebUI component
+      - registering the ResidentAI-facing read-only interface for real use
+
+  evidence_standard:
+    - git_history
+    - automated_tests
+    - pipeline_run_records
+    - data_quality_records
+    - structured_logs
+    - work_queue_status
+    - execution_history_records
+    - source_registry
+    - architecture_and_lineage_docs
+    - deployment_validation
+    - interview_demonstration_results
+    formal_canon_integration: deferred_until_after_mvp_works

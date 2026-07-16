@@ -1,0 +1,49 @@
+version: 1
+execution_history:
+  - timestamp: "2026-07-16T22:37:00Z"
+    event: repository_located
+    detail: "Confirmed deboerja/PowerPipeline on GitHub via api.github.com; public, empty, default branch main"
+
+  - timestamp: "2026-07-16T22:40:00Z"
+    event: repository_cloned
+    detail: "Cloned to /home/deboerja/git/github/PowerPipeline; push credential confirmed present via git credential fill"
+
+  - timestamp: "2026-07-16T22:45:00Z"
+    event: reuse_discovery_completed
+    detail: "Explore-agent inventory of Enphase, weather, ResidentAI wrapper, scheduling, secrets, and runtime-layout conventions; written to docs/EXISTING_COMPONENT_REUSE.md"
+
+  - timestamp: "2026-07-16T22:50:00Z"
+    event: spp_source_validation_completed
+    detail: "Confirmed mtlf-vs-actual, stlf-vs-actual, generation-mix-historical reachable and downloadable without auth; renewable forecast-vs-actual dataset not located after ~25 probe attempts, recorded as bl-001"
+
+  - timestamp: "2026-07-16T22:54:00Z"
+    event: feature_branch_created
+    detail: "feature/mvp-bootstrap-v1"
+
+  - timestamp: "2026-07-16T23:00:00Z"
+    event: control_plane_docs_written
+    detail: "NORTH_STAR, MVP_CHARTER, MVP_AUTONOMY_PROFILE (md+yaml), SOURCE_REGISTRY, DECISION_LOG, EXISTING_COMPONENT_REUSE, ARCHITECTURE, SECURITY_AND_AUTHORITY, DATA_LINEAGE, OPERATIONS, FAILURE_SCENARIOS, INTERVIEW_DEMO, FUTURE_ARCHITECTURE, and implementation/*.yaml files written"
+
+  - timestamp: "2026-07-16T23:07:00Z"
+    event: dev_environment_set_up
+    detail: "python venv (.venv) created, pyproject.toml deps (duckdb, pandas, pyarrow, pandera, httpx, pydantic, pytz) installed"
+
+  - timestamp: "2026-07-16T23:15:00Z"
+    event: spp_load_vertical_slice_implemented
+    detail: >
+      src/powerpipeline/contracts/spp_mtlf.py (Pandera contract),
+      src/powerpipeline/ingest/spp_load.py (fetch/land_raw/normalize),
+      src/powerpipeline/pipeline.py (orchestration + DuckDB upsert +
+      pipeline_runs/data_quality_results/source_freshness), sql/schema.sql,
+      sql/views.sql. 13 tests written and passing across
+      tests/test_spp_mtlf_contract.py, tests/test_spp_load_ingest.py,
+      tests/test_pipeline_curated.py, tests/test_missing_interval_detection.py.
+      ruff check clean.
+
+  - timestamp: "2026-07-16T23:18:00Z"
+    event: live_smoke_test_passed
+    detail: >
+      Ran src/powerpipeline/pipeline.py against the real, live SPP endpoint
+      (not a fixture) for 2026-07-16's OP-MTLF file: 386/386 records
+      accepted, 0 rejected. Confirms the ingestion code works against
+      production data, not just fixtures.

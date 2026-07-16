@@ -1,0 +1,51 @@
+version: 1
+blockers:
+  - id: bl-001
+    title: SPP renewable (wind/solar) forecast-vs-actual dataset not located
+    status: open
+    severity: medium
+    blocks: [wq-12, ana-05, src-03]
+    does_not_block: all other work items — proceeding independently
+    discovered_at: "2026-07-16"
+    commands_run: >
+      Probed https://portal.spp.org/file-browser-api/?fsName=<candidate>
+      for ~25 candidate dataset names derived from (a) the portal's page URL
+      slugs, (b) Tableau chartName constants found in the app's main.js
+      bundle, (c) known SPP terminology (MTLF/STLF/MTRF/VER/WEIS). Confirmed
+      working names: mtlf-vs-actual, stlf-vs-actual, generation-mix-historical.
+      Failed (HTTP 404): mtrf-vs-actual, mtrf, mtrf-vsa, strf-vs-actual,
+      mtwf-vs-actual, stwf-vs-actual, wgrpp, vgrpp, wind-vs-actual,
+      wind-forecast-vs-actual, wind-solar-forecast, wind-solar-vs-actual,
+      ver-forecast, ver-forecast-vs-actual, ver-vs-actual,
+      renewable-forecast-vs-actual, vsa-vs-actual, res-vs-actual,
+      resource-vs-actual, vgrf-vs-actual, solar-forecast-vs-actual, and
+      several more listed in docs/SOURCE_REGISTRY.md.
+    evidence: docs/SOURCE_REGISTRY.md §Renewable forecast vs. actual
+    attempted_solutions:
+      - static analysis of the SPA's main.js bundle for a page->dataset config map (not found — likely fetched at runtime from an endpoint not identified via static analysis)
+      - direct probing of the file-browser-api with systematically constructed candidate names
+      - checking robots.txt / sitemap.xml (SPA catch-all, no useful data)
+    current_hypothesis: >
+      The correct dataset name/endpoint is either (a) served under a
+      different naming convention not yet guessed, (b) only discoverable by
+      observing the actual network request a real browser makes when
+      loading the corresponding dashboard page (requires JS execution, not
+      just static bundle analysis), or (c) not exposed through this specific
+      file-browser subsystem at all and instead lives behind the portal's
+      Tableau embedding (`/chart-api/dashboard/`), which would require a
+      different, more fragile integration approach (scraping a Tableau data
+      source) than the clean CSV downloads used for load data.
+    next_steps: >
+      Follow-up options, in preference order: (1) load the actual dashboard
+      page with a real browser (e.g. via the claude-in-chrome skill) and
+      inspect the network tab for the true request; (2) check SPP's public
+      Business Practices documentation for the current product name; (3) if
+      unresolved by MVP delivery, disclose the gap explicitly in the
+      interview demo rather than fabricate or silently substitute (see
+      docs/DECISION_LOG.md).
+    true_blocker: false
+    reason_not_a_true_blocker: >
+      Does not block all remaining meaningful work; independent work items
+      (contracts, raw landing, load ingestion, household bridges, DuckDB
+      schema, ResidentAI operations for the sources that do work) continue
+      per implementation/WORK_QUEUE.yaml.

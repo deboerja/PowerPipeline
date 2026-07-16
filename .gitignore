@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Runtime data — never committed, only sanitized fixtures under fixtures/ are
+raw/
+normalized/
+quarantine/
+database/
+*.duckdb
+logs/
+state/
+snapshots/
+backups/
+reports/*.html
+!reports/.gitkeep
+
+# Secrets — never committed
+.env
+*.env
+!.env.example
+
+# OS / editor
+.DS_Store
+*.swp

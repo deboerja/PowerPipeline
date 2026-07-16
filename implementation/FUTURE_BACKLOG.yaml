@@ -1,0 +1,52 @@
+version: 1
+future_backlog:
+  note: >
+    Items here trace to docs/NORTH_STAR.md and docs/FUTURE_ARCHITECTURE.md.
+    None are authorized for implementation as part of the MVP. Do not build
+    these just because they support the North Star.
+
+  items:
+    - id: fb-001
+      title: FranklinWH battery telemetry adapter
+      depends_on: authorized FranklinWH API/data access (does not exist yet)
+      notes: see docs/FUTURE_ARCHITECTURE.md §FranklinWH adapter
+
+    - id: fb-002
+      title: Home Assistant whole-home consumption / grid-import ingestion
+      depends_on: identifying actual sensor.* entities for consumption (not just solar production)
+      notes: no existing code found for this; would be new PowerPipeline-owned ingestion
+
+    - id: fb-003
+      title: EIA-930 SWPP reconciliation view
+      depends_on: none, just not built yet
+      notes: validation-only use, never a silent substitute for SPP (docs/DECISION_LOG.md)
+
+    - id: fb-004
+      title: Explainable recommendations layer
+      depends_on: MVP curated tables + a defined recommendation taxonomy
+      notes: read-only, human-facing only, never equipment control
+
+    - id: fb-005
+      title: Formal residentai-canon package integration for PowerPipeline capabilities
+      depends_on: MVP working and demonstrated
+      notes: MVP evidence standard (docs/MVP_AUTONOMY_PROFILE.md) is sufficient until then
+
+    - id: fb-006
+      title: Multi-writer / server-based database migration (e.g. Postgres)
+      depends_on: a concrete concurrency need that DuckDB's single-writer model can't serve
+      notes: not needed at current single-operator scale; see docs/FUTURE_ARCHITECTURE.md
+
+    - id: fb-007
+      title: SPP renewable (wind/solar) forecast-vs-actual dataset resolution
+      depends_on: locating the correct public dataset name/endpoint, or an alternative approach
+      notes: >
+        This one straddles MVP and backlog — it's an MVP acceptance-criteria
+        item that's currently blocked as an open investigation (see
+        docs/SOURCE_REGISTRY.md and implementation/BLOCKERS.yaml), not a
+        deferred nice-to-have. Kept here as well so it isn't lost if the MVP
+        ships with this gap disclosed rather than resolved.
+
+    - id: fb-008
+      title: Full retention-policy automation (tiered archive/expiry)
+      depends_on: none, deferred by MVP_AUTONOMY_PROFILE.md relaxed controls
+      notes: MVP retains everything under /srv/powerpipeline without automated expiry

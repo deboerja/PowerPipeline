@@ -1,0 +1,64 @@
+version: 1
+current_status:
+  last_updated: "2026-07-16T23:20:00Z"
+  phase: spp_load_vertical_slice_complete
+  branch: feature/mvp-bootstrap-v1
+  summary: >
+    Repository located (GitHub, deboerja/PowerPipeline), control-plane docs
+    and implementation-tracking files written, existing ResidentAI
+    components (Enphase, weather) inventoried for reuse, and SPP public data
+    sources validated live. One open item (renewable forecast-vs-actual
+    dataset) recorded as a non-blocking gap. A full working vertical slice
+    for SPP load ingestion is built and tested: raw landing, schema
+    validation/quarantine, UTC normalization, DuckDB curated table + accuracy
+    view, idempotent upsert, and missing-interval detection — 13 automated
+    tests passing plus one live smoke test against the real SPP endpoint
+    (386 real records ingested, zero rejected). Household bridges,
+    ResidentAI operations, scheduling, and real /srv deployment on Odin are
+    not yet built.
+
+  completed_phases:
+    - repository_discovery
+    - control_plane_docs
+    - autonomy_profile_recorded
+    - reusable_component_discovery
+    - spp_source_validation
+    - spp_load_ingestion_vertical_slice
+
+  in_progress_phase: household_bridges_and_residentai_operations
+
+  not_started:
+    - enphase_fixture_and_bridge
+    - weather_fixture_and_bridge
+    - household_solar_forecast_integration
+    - household_forecast_accuracy_view_validation
+    - bounded_backfill_from_watermark
+    - retry_logic
+    - structured_json_logging
+    - scheduling_templates
+    - residentai_read_operations
+    - runtime_deployment
+    - residentai_registration
+    - interview_report_and_demo_script
+    - failure_and_recovery_demo_beyond_unit_tests
+    - end_to_end_validation_against_deployed_system
+    - merge_and_tag
+
+  test_evidence:
+    suite: pytest tests/
+    result: "13 passed"
+    lint: "ruff check src/ tests/ — clean"
+    live_smoke_test: "2026-07-16 — real GET against portal.spp.org/file-browser-api/download/mtlf-vs-actual for 2026-07-16; 386/386 records accepted, 0 rejected, 0 quarantined"
+
+  checkpoints_awaiting_user_go_ahead:
+    - deploying to /srv on Odin
+    - wiring real Enphase/weather credentials into PowerPipeline code
+    - restarting any ResidentAI/OpenWebUI component
+    - registering the ResidentAI-facing interface for real use
+
+  git:
+    working_tree: clean_as_of_last_commit
+    remote: https://github.com/deboerja/PowerPipeline.git
+    default_branch: main
+    current_branch: feature/mvp-bootstrap-v1
+    pushed: pending_first_push
