@@ -24,12 +24,17 @@ def run_spp_load_ingest(
 ) -> dict:
     run_id = str(uuid.uuid4())
     started_at = datetime.now(timezone.utc)
-
-    result = spp_load.ingest_file(year, month, day, filename, raw_csv=raw_csv)
+    watermark_after = f"{year:04d}-{month:02d}-{day:02d}"
 
     con = db.init_db()
     status = "success"
+    result = None
     try:
+        # Fetching/landing/validating is inside the try too: a fetch failure
+        # (e.g. a simulated source outage) must still be recorded as a
+        # failed run, not silently raise before anything is logged -- see
+        # docs/FAILURE_SCENARIOS.md #4.
+        result = spp_load.ingest_file(year, month, day, filename, raw_csv=raw_csv)
         if result.normalized_path is not None:
             _upsert_normalized(con, result.normalized_path, result.raw_path.name, run_id)
         _record_completeness_check(con, run_id)
@@ -52,11 +57,11 @@ def run_spp_load_ingest(
                 started_at,
                 finished_at,
                 status,
-                result.records_in,
-                result.records_accepted,
-                result.records_rejected,
+                result.records_in if result else None,
+                result.records_accepted if result else None,
+                result.records_rejected if result else None,
                 None,
-                f"{year:04d}-{month:02d}-{day:02d}",
+                watermark_after,
             ],
         )
         con.execute(
@@ -73,7 +78,7 @@ def run_spp_load_ingest(
                 SOURCE_NAME,
                 finished_at if status == "success" else None,
                 finished_at,
-                f"{year:04d}-{month:02d}-{day:02d}",
+                watermark_after,
                 "fresh" if status == "success" else "failing",
             ],
         )
@@ -291,6 +296,73 @@ def run_household_solar_forecast_bridge(source_path: Path) -> dict:
         "records_accepted": len(normalized) if normalized is not None else 0,
         "records_rejected": len(rejected) if rejected is not None else 0,
     }
+
+
+def bounded_backfill(day_specs: list[tuple[int, int, int, str]]) -> dict:
+    """Ingest a bounded list of (year, month, day, filename) specs, one
+    ingestion run per spec. A failure on one day is recorded and does not
+    abort the rest of the batch -- this is what lets a scheduled run recover
+    from a single missed/failed day without needing the whole history
+    replayed. See docs/FAILURE_SCENARIOS.md #4.
+    """
+    results = []
+    for year, month, day, filename in day_specs:
+        try:
+            result = run_spp_load_ingest(year, month, day, filename)
+        except Exception as exc:  # noqa: BLE001 -- deliberately continue past any single day's failure
+            results.append({"date": f"{year:04d}-{month:02d}-{day:02d}", "status": "failed", "error": str(exc)})
+            continue
+        results.append({"date": f"{year:04d}-{month:02d}-{day:02d}", "status": result["status"]})
+    failed = [r for r in results if r["status"] != "success"]
+    return {"attempted": len(results), "failed": len(failed), "results": results}
+
+
+def run_quality_sweep() -> dict:
+    """Independent, periodic full-table quality sweep -- distinct from the
+    per-run completeness check that fires inline with each ingest. Re-checks
+    the entire fact_spp_load_forecast_actual table for gaps (not just the
+    latest batch) and flags any source whose freshness has gone stale
+    without a new successful run. Intended to run hourly via
+    powerpipeline-quality-check.timer, independent of ingestion timing.
+    """
+    run_id = str(uuid.uuid4())
+    started_at = datetime.now(timezone.utc)
+    con = db.init_db()
+    try:
+        _record_completeness_check(con, run_id)
+        stale = con.execute(
+            """
+            SELECT source, last_success_at, status
+            FROM source_freshness
+            WHERE status != 'fresh'
+               OR last_success_at IS NULL
+               OR last_success_at < now() - INTERVAL 25 HOUR
+            """
+        ).fetchall()
+        next_id = con.execute("SELECT coalesce(max(id), 0) + 1 FROM data_quality_results").fetchone()[0]
+        status = "fail" if stale else "pass"
+        detail = f"{len(stale)} stale/failing source(s): {stale}" if stale else "all sources fresh"
+        con.execute(
+            """
+            INSERT INTO data_quality_results (id, run_id, check_name, status, detail, checked_at)
+            VALUES (?, ?, 'source_freshness_sweep', ?, ?, now())
+            """,
+            [next_id, run_id, status, detail],
+        )
+        return {"run_id": run_id, "stale_sources": len(stale)}
+    finally:
+        finished_at = datetime.now(timezone.utc)
+        con.execute(
+            """
+            INSERT INTO pipeline_runs
+                (run_id, source, started_at, finished_at, status,
+                 records_in, records_accepted, records_quarantined,
+                 watermark_before, watermark_after)
+            VALUES (?, 'quality_sweep', ?, ?, 'success', NULL, NULL, NULL, NULL, NULL)
+            """,
+            [run_id, started_at, finished_at],
+        )
+        con.close()
 
 
 def _record_completeness_check(con: duckdb.DuckDBPyConnection, run_id: str) -> None:

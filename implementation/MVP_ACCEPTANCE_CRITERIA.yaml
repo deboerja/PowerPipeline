@@ -76,8 +76,8 @@ mvp_acceptance_criteria:
       evidence: "source_freshness table updated per run (src/powerpipeline/pipeline.py); read_pipeline_health operation not yet built (wq-24)"
     - id: prc-06
       criterion: Bounded backfills work
-      status: not_met
-      note: "watermark is recorded (source_freshness.current_watermark) but nothing yet computes a bounded re-fetch range from it — see wq-18 in WORK_QUEUE.yaml"
+      status: met_in_dev
+      evidence: "pipeline.bounded_backfill() + retry-with-backoff in ingest/spp_load.py::fetch_raw_csv; tests/test_failure_recovery.py (4 tests) -- also caught and fixed a real bug where a fetch failure would raise before being recorded in pipeline_runs"
     - id: prc-07
       criterion: Pipeline runs are recorded
       status: met_in_dev
@@ -130,13 +130,16 @@ mvp_acceptance_criteria:
   operations:
     - id: ops-01
       criterion: Scheduled execution works
-      status: not_met
+      status: met_in_dev
+      note: "6 systemd unit templates written and verified with systemd-analyze verify (deployment/systemd/); not yet installed/enabled on Odin -- installation is behind the agent-imposed deployment checkpoint"
     - id: ops-02
       criterion: Service health is visible
-      status: not_met
+      status: met_in_dev
+      evidence: "read_pipeline_health() + read_data_quality_summary() in residentai_tool.py, backed by real pipeline_runs/source_freshness/data_quality_results tables"
     - id: ops-03
       criterion: Logs are available
-      status: not_met
+      status: met_in_dev
+      evidence: "residentai_tool.py writes structured JSONL audit logs per call; pipeline.py records structured pipeline_runs rows. Broader structured JSON logging for ingestion scripts themselves (not just the ResidentAI tool) is not yet added -- see CURRENT_STATUS.yaml not_started list"
     - id: ops-04
       criterion: Restart is documented
       status: met
@@ -151,19 +154,22 @@ mvp_acceptance_criteria:
       evidence: docs/OPERATIONS.md
     - id: ops-07
       criterion: Upstream failures do not destroy curated data
-      status: not_met
-      note: designed for (docs/FAILURE_SCENARIOS.md #5), not yet demonstrated against a running system
+      status: met_in_dev
+      evidence: "tests/test_failure_recovery.py::test_bounded_backfill_continues_past_one_failed_day_and_preserves_curated_data — demonstrated with a real simulated outage, not just designed for"
 
   demonstration:
     - id: dem-01
       criterion: Offline demonstration works
-      status: not_met
+      status: met_in_dev
+      evidence: "python -m powerpipeline.demo run-all — actually executed 2026-07-16, all 20 steps ran against fixtures with no live network access, generated reports/interview_demo_report.html"
     - id: dem-02
       criterion: Failure injection works
-      status: not_met
+      status: met_in_dev
+      evidence: "demo steps 11-14 inject an invalid record, a missing interval, and a simulated source outage — all real, not narrated"
     - id: dem-03
       criterion: Recovery works
-      status: not_met
+      status: met_in_dev
+      evidence: "demo steps 13-15 show bounded_backfill recovering the day after a simulated outage and prior curated data surviving untouched"
     - id: dem-04
       criterion: Interview instructions are complete
       status: met
@@ -171,14 +177,17 @@ mvp_acceptance_criteria:
 
   overall_status: in_progress
   overall_note: >
-    Control-plane, documentation, SPP load ingestion, Enphase/weather/
-    household-solar-forecast bridges, and the ResidentAI read-only tool are
-    all built and passing 31 automated tests plus one live smoke test
-    against the real SPP endpoint. Remaining before "met" (not "met_in_dev")
-    can be claimed: bounded backfill from watermark, retry logic, structured
-    JSON logging beyond the residentai_tool audit log, scheduling templates
-    installed and running, real /srv deployment on Odin, ResidentAI
-    interface registration, the interview demo script, and end-to-end
-    validation against the deployed system (wq-29). Do not report MVP
-    completion until every non-blocked item above is "met" with cited
-    evidence from the deployed system.
+    Every acceptance criterion except src-03/ana-05 (blocked on bl-001) is
+    now at least "met_in_dev": control-plane docs, SPP load ingestion,
+    household bridges, the ResidentAI read-only tool, retry/bounded-backfill,
+    scheduling templates (verified but not installed), and the offline
+    interview demo (actually executed, not just written) are all built and
+    tested -- 37 automated tests passing, ruff clean, one live smoke test
+    against the real SPP endpoint. What remains before "met" (not
+    "met_in_dev") can be claimed is entirely deployment-side: installing the
+    systemd timers, real /srv deployment on Odin, ResidentAI interface
+    registration, and end-to-end validation against the running deployed
+    system (wq-25, wq-26, wq-29) -- all gated behind the agent-imposed
+    checkpoints in docs/MVP_AUTONOMY_PROFILE.md pending explicit user
+    go-ahead. Do not report MVP completion until every non-blocked item
+    above is "met" with cited evidence from the deployed system.

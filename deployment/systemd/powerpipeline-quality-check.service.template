@@ -1,0 +1,13 @@
+[Unit]
+Description=PowerPipeline Quality Sweep (full-table completeness + freshness)
+Documentation=file:/home/deboerja/git/github/PowerPipeline/docs/OPERATIONS.md
+
+[Service]
+Type=oneshot
+Environment=POWERPIPELINE_RUNTIME_ROOT=/srv/powerpipeline
+ExecStart=/home/deboerja/git/github/PowerPipeline/scripts/run_quality_sweep.sh
+Nice=5
+TimeoutStartSec=60
+
+# This is a template only. Do not install or enable until explicitly
+# approved -- see docs/MVP_AUTONOMY_PROFILE.md agent-imposed checkpoints.

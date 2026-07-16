@@ -1,0 +1,13 @@
+[Unit]
+Description=Run PowerPipeline SPP Load Ingestion hourly
+
+[Timer]
+OnCalendar=*-*-* *:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+# This is a template only. Do not install or enable until explicitly approved.
+# :10 past the hour, to run just after SPP typically publishes the new
+# hourly file (observed ~:05 past the hour during source validation).

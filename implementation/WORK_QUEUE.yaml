@@ -264,9 +264,9 @@ work_queue:
       acceptance_criteria: invalid records never reach curated tables
       risk: medium
       runtime_impact: none
-      status: partial
+      status: completed
       commit: ""
-      validation_evidence: "quarantine + missing-interval completeness check implemented and tested (tests/test_spp_mtlf_contract.py, tests/test_missing_interval_detection.py); retry logic and bounded backfill (docs/FAILURE_SCENARIOS.md #4) not yet implemented"
+      validation_evidence: "quarantine + missing-interval completeness check tested (tests/test_spp_mtlf_contract.py, tests/test_missing_interval_detection.py); retry with backoff + bounded_backfill() tested in tests/test_failure_recovery.py, including a real bug fix (fetch failures now recorded in pipeline_runs instead of raising before any DB write)"
       blocker_ref: null
 
     - id: wq-20
@@ -306,9 +306,9 @@ work_queue:
       acceptance_criteria: read_pipeline_health / read_data_quality_summary return real data
       risk: low
       runtime_impact: none
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "read_pipeline_health/read_data_quality_summary tested in test_residentai_tool.py; pipeline_runs+data_quality_results+source_freshness populated by every ingest and by run_quality_sweep()"
       blocker_ref: null
 
     - id: wq-23
@@ -320,9 +320,9 @@ work_queue:
       acceptance_criteria: templates valid; not yet installed (checkpoint)
       risk: medium
       runtime_impact: real once installed — behind agent checkpoint
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "6 systemd unit templates under deployment/systemd/, all pass systemd-analyze verify; scripts/run_{spp_ingest,household_bridge,quality_sweep}.sh; installation deferred behind agent checkpoint"
       blocker_ref: null
 
     - id: wq-24
@@ -376,9 +376,9 @@ work_queue:
       acceptance_criteria: readable by a non-engineer
       risk: low
       runtime_impact: none
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "src/powerpipeline/demo.py run-all; generates reports/interview_demo_report.html; ran successfully end to end 2026-07-16, all 20 steps produced real output including an honestly-disclosed renewable-forecast gap (step 6) -- verified by actually running it, not just writing it"
       blocker_ref: null
 
     - id: wq-28
@@ -390,9 +390,9 @@ work_queue:
       acceptance_criteria: see docs/FAILURE_SCENARIOS.md
       risk: low
       runtime_impact: none
-      status: pending
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: "all 6 scenarios covered: #1/#2/#3 in existing tests, #4/#5 in tests/test_failure_recovery.py, #6 in tests/test_residentai_tool.py; all 6 also demonstrated live in src/powerpipeline/demo.py steps 10-18"
       blocker_ref: null
 
     - id: wq-29

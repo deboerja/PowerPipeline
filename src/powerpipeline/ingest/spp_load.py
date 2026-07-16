@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +30,8 @@ from powerpipeline.storage import paths
 
 SOURCE_BASE = "https://portal.spp.org"
 DATASET = "mtlf-vs-actual"
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_RETRY_BACKOFF_SECONDS = 2
 
 
 @dataclass
@@ -42,10 +45,22 @@ class IngestResult:
     quarantine_path: Path | None
 
 
-def fetch_raw_csv(year: int, month: int, day: int, filename: str, client: httpx.Client | None = None) -> bytes:
+def fetch_raw_csv(
+    year: int,
+    month: int,
+    day: int,
+    filename: str,
+    client: httpx.Client | None = None,
+    max_retries: int = DEFAULT_MAX_RETRIES,
+    retry_backoff_seconds: float = DEFAULT_RETRY_BACKOFF_SECONDS,
+) -> bytes:
     """Download one raw MTLF file from SPP's public portal. Forces IPv4,
     matching the existing weather-pipeline convention on this host (this
     network's IPv6 route is blackholed — see docs/EXISTING_COMPONENT_REUSE.md).
+
+    Retries transient failures (connection errors, 5xx, timeouts) up to
+    max_retries times with linear backoff before giving up -- see
+    docs/FAILURE_SCENARIOS.md #4.
     """
     url = f"{SOURCE_BASE}/file-browser-api/download/{DATASET}"
     path_param = f"/{year:04d}/{month:02d}/{day:02d}/{filename}"
@@ -53,9 +68,19 @@ def fetch_raw_csv(year: int, month: int, day: int, filename: str, client: httpx.
     if own_client:
         client = httpx.Client(transport=httpx.HTTPTransport(local_address="0.0.0.0"), timeout=30.0)
     try:
-        resp = client.get(url, params={"path": path_param})
-        resp.raise_for_status()
-        return resp.content
+        last_exc = None
+        for attempt in range(max_retries + 1):
+            try:
+                resp = client.get(url, params={"path": path_param})
+                resp.raise_for_status()
+                return resp.content
+            except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+                last_exc = exc
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code < 500:
+                    raise  # 4xx is not transient -- don't waste retries on it
+                if attempt < max_retries:
+                    time.sleep(retry_backoff_seconds * (attempt + 1))
+        raise last_exc
     finally:
         if own_client:
             client.close()

@@ -1,0 +1,13 @@
+[Unit]
+Description=Run PowerPipeline Quality Sweep hourly
+
+[Timer]
+OnCalendar=*-*-* *:25:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+# This is a template only. Do not install or enable until explicitly approved.
+# Runs independently of the ingest timer's own inline check, so a bug in one
+# doesn't mask the other -- see docs/FAILURE_SCENARIOS.md.

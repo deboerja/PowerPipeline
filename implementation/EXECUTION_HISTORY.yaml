@@ -81,3 +81,35 @@ execution_history:
       exists on the class at all. 31 tests total, all passing; ruff clean.
       Not registered with OpenWebUI/ResidentAI -- that stays behind the
       deployment checkpoint.
+
+  - timestamp: "2026-07-16T23:47:00Z"
+    event: scheduling_templates_and_retry_backfill_implemented
+    detail: >
+      6 systemd unit templates under deployment/systemd/ (spp-ingest,
+      household-bridge, quality-check -- each service+timer), all pass
+      systemd-analyze verify. Corrected docs/OPERATIONS.md, which had
+      described a nonexistent "recompute forecast-vs-actual views" timer --
+      those are plain SQL views, not materialized tables, so there's nothing
+      to recompute on a schedule. Added retry-with-backoff to
+      ingest/spp_load.py::fetch_raw_csv and pipeline.bounded_backfill().
+      Writing the failure-recovery tests surfaced and fixed a real bug: a
+      fetch failure was raising before run_spp_load_ingest's try block, so
+      it would never have been recorded in pipeline_runs -- restructured so
+      failures are always recorded. 4 new tests in test_failure_recovery.py,
+      2 in test_quality_sweep.py.
+
+  - timestamp: "2026-07-16T23:50:00Z"
+    event: interview_demo_built_and_executed
+    detail: >
+      src/powerpipeline/demo.py implementing all 20 steps from
+      docs/INTERVIEW_DEMO.md. Actually run (python -m powerpipeline.demo
+      run-all), not just written -- caught a second real issue during that
+      run: the missing-interval-detection step was reusing fixture
+      timestamps already loaded by earlier steps, so the "gap" it introduced
+      was silently backfilled by prior upserts before the completeness check
+      ran, which would have shown misleading demo output. Fixed by isolating
+      that one demonstration in a fresh runtime root, matching the pattern
+      already used by tests/test_missing_interval_detection.py. Reran and
+      confirmed the gap is now correctly flagged. Generated
+      reports/interview_demo_report.html. 37 tests total, all passing; ruff
+      clean.

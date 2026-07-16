@@ -1,0 +1,14 @@
+[Unit]
+Description=Run PowerPipeline Household Bridge every 30 minutes
+
+[Timer]
+OnCalendar=*-*-* *:05,35:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+# This is a template only. Do not install or enable until explicitly approved.
+# Offset 5 minutes past :00/:30 so it runs shortly after the existing
+# weather-current timer (also every 30 min) and won't race an in-flight
+# upstream write.

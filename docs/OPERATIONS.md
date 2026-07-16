@@ -22,11 +22,15 @@ existing ResidentAI convention):
 
 | Timer | Cadence | Action |
 |---|---|---|
-| `powerpipeline-spp-ingest.timer` | hourly | pull latest `mtlf-vs-actual` files |
+| `powerpipeline-spp-ingest.timer` | hourly, :10 | pull latest `mtlf-vs-actual` file |
 | `powerpipeline-household-bridge.timer` | every 30 min | read latest Enphase/weather curated files |
-| `powerpipeline-quality-check.timer` | hourly, after ingest | run completeness/freshness/range checks |
-| `powerpipeline-forecast-accuracy.timer` | daily | recompute forecast-vs-actual views |
+| `powerpipeline-quality-check.timer` | hourly, :25 | full-table completeness + source-freshness sweep, independent of the per-run checks that fire inline with each ingest |
 | `powerpipeline-report.timer` | daily | regenerate the static report |
+
+There is no separate "recompute forecast-vs-actual" job -- the accuracy
+tables (`v_spp_load_forecast_accuracy`, `v_household_solar_forecast_accuracy`)
+are plain SQL views, not materialized tables, so they're always current as
+of the last ingest with no scheduled recomputation step needed.
 
 ```bash
 systemctl --user status powerpipeline-spp-ingest.timer
