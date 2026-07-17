@@ -1,8 +1,8 @@
 version: 1
 current_status:
-  last_updated: "2026-07-17T01:10:00Z"
-  phase: mvp_complete_pending_merge_and_tag
-  branch: feature/mvp-bootstrap-v1
+  last_updated: "2026-07-17T01:15:00Z"
+  phase: mvp_complete_merged_and_tagged
+  branch: main
   summary: >
     Full end-to-end validation complete. A genuine production bug was
     found and fixed during this pass: both the Enphase and weather
@@ -31,12 +31,11 @@ current_status:
     - residentai_openwebui_registration_completed
     - end_to_end_validation_and_production_bugfix
 
-  in_progress_phase: none — ready for merge and tag (wq-30)
+  in_progress_phase: none — MVP complete, final handoff being written (wq-31)
 
   not_started:
     - structured_json_logging_for_ingestion_scripts_beyond_residentai_audit
     - powerpipeline_rebuild_entrypoint (documented manual procedure exists; no single command yet)
-    - merge_and_tag
     - final_handoff
 
   test_evidence:
@@ -81,8 +80,9 @@ current_status:
     - "SPP source currently showing 'failing' in source_freshness because SPP itself hasn't published 2026-07-17's file yet at time of writing -- confirmed real external condition, not a bug"
 
   git:
-    working_tree: pending_next_commit
+    working_tree: clean_as_of_last_commit
     remote: https://github.com/deboerja/PowerPipeline.git
     default_branch: main
-    current_branch: feature/mvp-bootstrap-v1
-    pushed: partially — see EXECUTION_HISTORY.yaml for latest commit hash
+    current_branch: main
+    release_tag: v0.1.0-mvp
+    pushed: true — main and v0.1.0-mvp both pushed to origin

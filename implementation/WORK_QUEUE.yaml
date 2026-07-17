@@ -469,9 +469,19 @@ work_queue:
       acceptance_criteria: clean tree, tests pass, secret scan pass
       risk: low
       runtime_impact: none
-      status: pending
-      commit: ""
-      validation_evidence: ""
+      status: completed
+      commit: "0ead111"
+      validation_evidence: >
+        Discovered the GitHub repo had no main branch at all yet (created
+        empty, only ever pushed to feature/mvp-bootstrap-v1) -- confirmed
+        via GET /repos/deboerja/PowerPipeline/branches. This was branch
+        creation, not a true merge: created main from the fully-validated
+        feature branch tip and pushed it. Secret scan (git grep for
+        api_key/secret/password/token/bearer patterns, known real-token
+        prefixes, and any tracked .env file) came back clean. Working tree
+        clean, 52 tests passing at merge time. Tagged v0.1.0-mvp with an
+        annotated tag documenting scope and the one known limitation
+        (bl-001), pushed to origin.
       blocker_ref: null
 
     - id: wq-31

@@ -311,3 +311,15 @@ execution_history:
       SPP correctly shown as 'failing' because SPP itself hadn't published
       2026-07-17's file yet at time of writing (confirmed via direct API
       check) -- a real external condition, not a bug.
+
+  - timestamp: "2026-07-17T01:12:00Z"
+    event: merged_and_tagged
+    detail: >
+      Discovered the GitHub repo had no main branch yet at all (created
+      empty; only feature/mvp-bootstrap-v1 had ever been pushed) --
+      confirmed via GET /repos/deboerja/PowerPipeline/branches. Ran a
+      secret scan (git grep for common key/token/password patterns, known
+      real-token prefixes, and any tracked non-.example .env file) --
+      clean. Created main from the validated feature branch tip, pushed it,
+      tagged v0.1.0-mvp (annotated, documenting scope and the bl-001
+      limitation), pushed the tag.
