@@ -109,7 +109,7 @@ mvp_acceptance_criteria:
     - id: rai-01
       criterion: Named read-only operations work
       status: met
-      evidence: "read_household_solar_history, read_household_solar_forecast, read_spp_load_forecast_accuracy, read_pipeline_health, read_data_quality_summary all called directly against the deployed database 2026-07-17 and returned real data (see ana-01/02/04, prc-05/07 evidence). Not yet called through an actual OpenWebUI registration -- that's wq-26, still behind its own checkpoint."
+      evidence: "All 8 named operations registered as OpenWebUI tool id 'residentai_powerpipeline' 2026-07-17 (8/8 parsed into callable specs by OpenWebUI itself). The tool's exact source was copied into the live openwebui container and executed there directly -- read_pipeline_health returned correct real data through the real container's own Python environment and the real mounted export files, not just via direct DB access in dev."
     - id: rai-02
       criterion: Arbitrary SQL is rejected
       status: met
@@ -175,21 +175,26 @@ mvp_acceptance_criteria:
       status: met
       evidence: "docs/INTERVIEW_DEMO.md, and the demo it describes has actually been run successfully (see dem-01)"
 
-  overall_status: deployed_pending_residentai_registration
+  overall_status: deployed_and_registered_pending_final_e2e_validation
   overall_note: >
     Deployed to /srv/apps/powerpipeline on Odin 2026-07-17 (user approved
     "deploy to /srv on Odin"; runtime root revised from the originally
     planned top-level /srv/powerpipeline/ to /srv/apps/powerpipeline/ since
     creating a new top-level /srv dir required root -- see
-    docs/DECISION_LOG.md). All 3 systemd timers installed and enabled;
-    the household-bridge timer already fired on its real schedule and
-    succeeded against production data. Every acceptance criterion except
-    src-03/ana-05 (blocked on bl-001) is now "met" against the real deployed
-    system, with two exceptions still "met_in_dev" (rai-04/05, whose
-    validation logic is DB-independent and already fully tested, and ana-03,
-    whose view logic is proven but the deployed forecast/actual date ranges
-    don't currently overlap). What remains: registering the ResidentAI/
-    OpenWebUI interface (wq-26) and a final end-to-end validation pass
-    (wq-29) -- both still behind their own explicit checkpoints, not yet
-    approved by the user. Do not report full MVP completion until those are
+    docs/DECISION_LOG.md). All 3 systemd timers installed and enabled; the
+    household-bridge timer already fired on its real schedule and succeeded
+    against production data. ResidentAI/OpenWebUI registration completed
+    2026-07-17 (user approved "go ahead with all three"): a JSON-export
+    redesign (openwebui container has no duckdb), one read-only mount added
+    to docker-compose.yml's openwebui service only, tool registered via
+    OpenWebUI's own API using an already-provisioned admin token, openwebui
+    container recreated and confirmed healthy, ollama confirmed untouched.
+    The tool's exact source was executed inside the live container against
+    real data and returned correct results. Every acceptance criterion
+    except src-03/ana-05 (blocked on bl-001) is now "met", with two
+    exceptions still "met_in_dev" (rai-04/05, whose validation logic is
+    DB-independent and already fully tested, and ana-03, whose view logic
+    is proven but the deployed forecast/actual date ranges don't currently
+    overlap). What remains: a final end-to-end validation pass (wq-29) and
+    merge/tag (wq-30) -- do not report full MVP completion until those are
     done and every remaining item reads "met."

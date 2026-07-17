@@ -1,24 +1,19 @@
 version: 1
 current_status:
-  last_updated: "2026-07-17T00:10:00Z"
-  phase: deployed_to_odin_pending_residentai_registration
+  last_updated: "2026-07-17T00:45:00Z"
+  phase: deployed_and_registered_pending_final_e2e_validation
   branch: feature/mvp-bootstrap-v1
   summary: >
-    User approved "deploy to /srv on Odin" 2026-07-16. Deployed to
-    /srv/apps/powerpipeline/ (runtime root revised from the originally
-    planned top-level /srv/powerpipeline/ since that required root -- see
-    docs/DECISION_LOG.md). All 3 systemd timers (spp-ingest,
-    household-bridge, quality-check) installed and enabled. The
-    household-bridge timer already fired on its real schedule and succeeded
-    against real production data: 420 household solar rows, 421 weather
-    rows, 7 solar-forecast rows now genuinely curated. SPP ingestion
-    manually validated against a real, currently-existing file (386/386
-    records); the automatic run for today's not-yet-published file
-    correctly recorded a failure instead of fabricating data -- proving
-    both the success and failure paths work against production, not just
-    fixtures. Every acceptance criterion except the two blocked on bl-001
-    (SPP renewable forecast) is now "met" or "met_in_dev" with real
-    evidence -- see implementation/MVP_ACCEPTANCE_CRITERIA.yaml.
+    Both remaining checkpoints (real /srv deployment, ResidentAI/OpenWebUI
+    registration) approved by the user and completed 2026-07-17. PowerPipeline
+    runs as 3 systemd timers on Odin against real production data (420+
+    household solar rows, 421+ weather rows, real SPP load data). The
+    ResidentAI-facing tool is registered in OpenWebUI (id
+    residentai_powerpipeline, 8 named operations, 8/8 parsed into callable
+    specs) and was validated by executing its exact source code inside the
+    live openwebui container against the real exported data. Only wq-29
+    (final end-to-end validation) and wq-30 (merge + tag) remain before the
+    MVP can be called fully complete.
 
   completed_phases:
     - repository_discovery
@@ -33,48 +28,63 @@ current_status:
     - retry_and_bounded_backfill
     - offline_interview_demo_executed
     - deployed_to_srv_apps_powerpipeline_on_odin
+    - json_export_and_openwebui_tool_script_built
+    - residentai_openwebui_registration_completed
 
-  in_progress_phase: none — awaiting user go-ahead for ResidentAI registration
+  in_progress_phase: none — ready for final end-to-end validation (wq-29)
 
   not_started:
     - structured_json_logging_for_ingestion_scripts_beyond_residentai_audit
-    - residentai_registration_with_openwebui
+    - powerpipeline_rebuild_entrypoint (documented manual procedure exists; no single command yet)
     - end_to_end_validation_against_deployed_system_wq29
     - merge_and_tag
 
   test_evidence:
     suite: pytest tests/
-    result: "37 passed"
-    lint: "ruff check src/ tests/ — clean"
-    live_smoke_test: "2026-07-16 — real GET against portal.spp.org for 2026-07-16; 386/386 records accepted"
-    interview_demo: "python -m powerpipeline.demo run-all executed successfully 2026-07-16; reports/interview_demo_report.html generated"
+    result: "48 passed"
+    lint: "ruff check src/ tests/ deployment/ — clean"
+    live_smoke_test: "2026-07-16 — real GET against portal.spp.org; 386/386 records accepted"
+    interview_demo: "python -m powerpipeline.demo run-all executed successfully 2026-07-16"
     systemd_verification: "systemd-analyze verify passed for all 6 unit files"
-    real_deployment_validation_2026_07_17: >
-      Household bridge timer auto-fired and succeeded (420/421/7 real rows
-      landed). SPP path manually validated against a real existing file
-      (386/386 records). SPP auto-run for the not-yet-published current-hour
-      file correctly recorded a 'failed' pipeline_runs row and left existing
-      curated data untouched. read_household_solar_history,
-      read_household_solar_forecast, read_spp_load_forecast_accuracy,
-      read_pipeline_health, read_data_quality_summary all called directly
-      against the deployed database and returned real data. A DELETE against
-      the deployed database via the tool's own connection was re-verified
-      to raise DuckDB's read-only error.
+    real_deployment_validation: "household bridge auto-fired and succeeded (420+/421+/7 real rows); SPP path manually validated (386/386); auto-run for not-yet-published file correctly recorded failure"
+    residentai_registration_validation: >
+      Tool registered via POST /api/v1/tools/create; verified 8/8 methods
+      parsed into specs via GET /api/v1/tools/id/residentai_powerpipeline.
+      docker-compose.yml diff confirmed to be exactly one added line (the
+      new mount), openwebui service block only. openwebui container
+      recreated and confirmed healthy; ollama's container start time
+      confirmed unchanged before/after. Tool's exact source copied into the
+      running openwebui container and executed there directly --
+      read_pipeline_health returned correct real data through the
+      container's own Python environment.
 
   deployment:
     runtime_root: /srv/apps/powerpipeline
-    code_location: /home/deboerja/git/github/PowerPipeline (git checkout; not copied into /srv, matching the existing homelab convention of running from the git checkout with only data under /srv)
+    code_location: /home/deboerja/git/github/PowerPipeline (git checkout; not copied into /srv)
     systemd_units_installed:
       - powerpipeline-spp-ingest.service / .timer (hourly, :10)
       - powerpipeline-household-bridge.service / .timer (every 30 min, :05/:35)
-      - powerpipeline-quality-check.service / .timer (hourly, :25)
+      - powerpipeline-quality-check.service / .timer (hourly, :25 -- also runs the JSON export)
     config_file: "~/.config/residentai/powerpipeline.env (mode 600, no secrets -- path config only)"
     ports_opened: none
-    docker_compose: not used — systemd timers only, matching every other homelab capability
+    docker_compose: not used for PowerPipeline itself (systemd timers only); one read-only mount added to the existing shared ai/docker-compose.yml's openwebui service
 
-  checkpoints_awaiting_user_go_ahead:
-    - restarting any ResidentAI/OpenWebUI component
-    - registering the ResidentAI-facing interface for real use
+  residentai_integration:
+    tool_id: residentai_powerpipeline
+    registered_via: "POST /api/v1/tools/create (OpenWebUI REST API, existing admin token)"
+    methods: 8
+    disable_or_rollback: see docs/OPERATIONS.md "ResidentAI integration: status, disable, and rollback"
+    known_limitation: >
+      API-based delete returned HTTP 401 for the available token's
+      permission set (role=admin, workspace.tools=false) -- disable/delete
+      must go through the OpenWebUI Admin UI, or the mount can be reverted
+      as a no-permission-needed kill-switch. Documented, not silently
+      worked around.
+    credential_note: >
+      While checking this token's permissions via GET /api/v1/auths/, the
+      response echoed the token in plaintext into the assistant's tool
+      output (now part of this session's transcript). Flagged to the user
+      at the time. No other credential was touched.
 
   git:
     working_tree: pending_next_commit

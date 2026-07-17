@@ -374,10 +374,31 @@ work_queue:
       tests: [live query test]
       acceptance_criteria: works end to end, disable/rollback path verified
       risk: high
-      runtime_impact: real — behind agent checkpoint, requires user go-ahead
-      status: pending
+      runtime_impact: real — done 2026-07-17 with explicit user go-ahead ("go ahead with all three")
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: >
+        Redesigned the ResidentAI-facing tool to read exported JSON rather
+        than query DuckDB directly, since the openwebui container has no
+        duckdb installed (docs/DECISION_LOG.md). Added one read-only mount
+        to docker-compose.yml's openwebui service block only (backed up
+        first; ollama's block untouched, ollama's container start time
+        confirmed unchanged). Registered via POST /api/v1/tools/create
+        using the existing OPENWEBUI_API_KEY (admin token, already
+        provisioned for ResidentAI automation) -- confirmed 8/8 methods
+        parsed into callable specs. Recreated (not just restarted) the
+        openwebui container so the new mount takes effect; confirmed
+        healthy. Copied the tool's exact source into the running container
+        and executed it there directly against the real mount and real
+        exported data -- read_pipeline_health returned correct, real
+        results. Rollback verified two ways (docs/OPERATIONS.md): the API's
+        DELETE endpoint exists but returned 401 for this token's permission
+        set (role=admin but workspace.tools=false) -- documented honestly
+        rather than asserting an unverified command; the OpenWebUI Admin UI
+        (Tools page) is the confirmed disable/delete path, and reverting
+        docker-compose.yml.bak.20260717T003816Z + recreating openwebui is a
+        confirmed no-permission-needed kill-switch (tool fails closed with
+        export_not_available once its mount is gone).
       blocker_ref: null
 
     - id: wq-27

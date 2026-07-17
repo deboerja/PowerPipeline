@@ -106,3 +106,62 @@ sudo password over something this routine.
 **Impact:** All docs, `.env.example`, and systemd unit templates updated to
 reference `/srv/apps/powerpipeline/` consistently. No functional difference
 to the pipeline itself — this is purely a filesystem-location decision.
+
+## 2026-07-17 — ResidentAI tool reads exported JSON, not DuckDB directly
+
+**Decision:** The OpenWebUI-facing tool (`deployment/openwebui-tools/
+residentai_powerpipeline_tool.py`) reads flat JSON snapshots exported by
+`src/powerpipeline/export.py` on the same schedule as the quality sweep,
+rather than querying `powerpipeline.duckdb` directly from inside the
+OpenWebUI container.
+
+**Why:** Confirmed via `docker exec openwebui python3 -c "import duckdb"` →
+`ModuleNotFoundError`. Installing `duckdb` into the shared `openwebui`
+image, or rebuilding it, would modify infrastructure PowerPipeline doesn't
+own for a dependency only PowerPipeline needs. Reading pre-exported JSON
+instead needs no container image change at all, and matches the existing
+Enphase/weather tools' own convention exactly (they don't query a live
+database either — they read curated JSON snapshots).
+
+**Note on the export's staleness ceiling:** because export runs hourly
+(folded into `powerpipeline-quality-check.timer`), the tool's data can be
+up to ~1 hour stale relative to the curated database. Every result exposes
+`export_generated_at_utc` so this is never hidden.
+
+## 2026-07-17 — ResidentAI registration: how it was actually done
+
+**Decision:** Registered the tool via OpenWebUI's REST API
+(`POST /api/v1/tools/create`), not by writing directly to its SQLite
+backend (`/srv/apps/openwebui/webui.db`).
+
+**Why:** `webui.db` is owned `root:root` and not writable by `deboerja`
+(no `sudo` available this session). The API, running as OpenWebUI's own
+process, can write its own database; using the existing
+`OPENWEBUI_API_KEY` already provisioned in `~/.config/residentai/
+memory-extraction.env` (the user's own personal admin token, already used
+for other ResidentAI automation against this same API) accomplishes the
+same result without any privilege escalation.
+
+**Disclosure:** while checking this token's role/permissions via
+`GET /api/v1/auths/`, the response body included the token in plaintext,
+which was echoed into the assistant's tool output and is now part of this
+conversation's transcript. Flagged directly to the user at the time. No
+other credential was read or used beyond this one, already-provisioned key.
+
+**What else changed on the live system:**
+- `/srv/compose/ai/docker-compose.yml`: one line added to the `openwebui`
+  service's `volumes:` list (`/srv/apps/powerpipeline/state/latest:
+  /srv/apps/powerpipeline/state/latest:ro`) — the `ollama` service block
+  was not touched. Backed up first to
+  `docker-compose.yml.bak.20260717T003816Z`, matching the existing
+  timestamped-backup convention already present in that directory (that
+  directory is not a git repository).
+- `openwebui` container recreated (`docker compose up -d --no-deps
+  openwebui`) to pick up the new mount — a plain `restart` doesn't apply
+  volume changes. `ollama`'s container start time was confirmed unchanged
+  before and after.
+
+**Validation:** the tool's exact source file was copied into the running
+container and executed there directly (not just tested in the repo's own
+venv), confirming it reads the real exported data correctly using the
+container's own Python environment and the new mount.

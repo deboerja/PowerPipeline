@@ -176,3 +176,69 @@ execution_history:
       the tool's own connection raised DuckDB's read-only error).
       Acceptance criteria upgraded from met_in_dev to met accordingly (see
       implementation/MVP_ACCEPTANCE_CRITERIA.yaml).
+
+  - timestamp: "2026-07-17T00:20:00Z"
+    event: user_approved_residentai_registration
+    detail: "User: 'go ahead with all three' -- approved editing docker-compose.yml, calling the OpenWebUI API, and restarting openwebui."
+
+  - timestamp: "2026-07-17T00:22:00Z"
+    event: discovered_duckdb_unavailable_in_openwebui_container
+    detail: >
+      docker exec openwebui python3 -c "import duckdb" raised
+      ModuleNotFoundError. Redesigned the ResidentAI-facing surface to
+      export curated query results to flat JSON (src/powerpipeline/export.py)
+      instead, matching the existing Enphase/weather tools' own convention
+      exactly. Built deployment/openwebui-tools/residentai_powerpipeline_tool.py
+      as a self-contained Tools+Valves script with no duckdb/sqlite import.
+      8 new tests (test_export.py, test_openwebui_tool_script.py) -- one of
+      which caught export_all()'s rolling window silently depending on the
+      real wall-clock date, fixed with an explicit as_of parameter. 48 tests
+      total, all passing.
+
+  - timestamp: "2026-07-17T00:38:00Z"
+    event: docker_compose_backed_up_and_edited
+    detail: >
+      Backed up /srv/compose/ai/docker-compose.yml to
+      docker-compose.yml.bak.20260717T003816Z (matching the existing
+      timestamped-backup convention; that directory is not a git repo).
+      Added exactly one line to the openwebui service's volumes list
+      (read-only mount of /srv/apps/powerpipeline/state/latest); confirmed
+      via diff that nothing else changed and the ollama service block was
+      untouched. Validated with `docker compose config --quiet`.
+
+  - timestamp: "2026-07-17T00:39:00Z"
+    event: tool_registered_via_openwebui_api
+    detail: >
+      While checking the existing OPENWEBUI_API_KEY's role/permissions via
+      GET /api/v1/auths/ (role: admin, user: Jacob DeBoer), the response
+      echoed the token itself in plaintext into the assistant's tool
+      output -- flagged to the user immediately. Registered the tool via
+      POST /api/v1/tools/create using that same already-provisioned token
+      (previously used only for memory-extraction automation). Confirmed
+      via GET /api/v1/tools/id/residentai_powerpipeline that OpenWebUI
+      correctly parsed all 8 methods into callable specs.
+
+  - timestamp: "2026-07-17T00:41:00Z"
+    event: openwebui_recreated_and_validated
+    detail: >
+      Ran `docker compose up -d --no-deps openwebui` (recreate, not plain
+      restart -- required for the new volume mount to take effect;
+      --no-deps kept ollama untouched, confirmed via unchanged
+      `docker inspect ollama` StartedAt). Waited for health check to pass.
+      Copied the tool's exact source file into the running container and
+      executed it there directly with `docker exec` -- read_pipeline_health
+      returned correct, real data using the container's own Python
+      environment and the new mount, not a substitute/mocked path.
+
+  - timestamp: "2026-07-17T00:45:00Z"
+    event: rollback_path_verified_and_corrected
+    detail: >
+      Attempted to verify a documented DELETE-via-API rollback path;
+      discovered it returns HTTP 401 for this token's permission set
+      (workspace.tools: false despite role: admin) -- a routing probe
+      (GET/DELETE/POST against real and nonexistent tool IDs) confirmed
+      this is a permission boundary, not a broken route. Corrected
+      docs/OPERATIONS.md and implementation/WORK_QUEUE.yaml to document
+      only the two confirmed-working rollback paths (OpenWebUI Admin UI;
+      reverting the compose-file mount) rather than assert an unverified
+      command.
