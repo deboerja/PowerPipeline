@@ -34,12 +34,12 @@ mvp_acceptance_criteria:
   storage:
     - id: stg-01
       criterion: Raw artifacts are retained
-      status: met_in_dev
-      evidence: "tests/test_spp_load_ingest.py::test_raw_landing_is_idempotent_for_identical_content, ::test_raw_landing_rejects_content_mismatch — immutability enforced"
+      status: met
+      evidence: "Real raw files present on the deployed system under /srv/apps/powerpipeline/raw/{spp,enphase,weather,solar_forecast}/. Immutability was genuinely exercised in production by the versioned-snapshot bugfix (docs/DECISION_LOG.md) -- both the original and revised versions of affected dates are still present on disk, never overwritten."
     - id: stg-02
       criterion: Normalized data exists
-      status: met_in_dev
-      evidence: "tests/test_spp_load_ingest.py::test_normalization_produces_utc_columns_and_dedupes"
+      status: met
+      evidence: "Confirmed via the same real household-bridge and SPP-ingest runs backing stg-01/stg-03."
     - id: stg-03
       criterion: Curated data exists
       status: met
@@ -56,20 +56,20 @@ mvp_acceptance_criteria:
   processing:
     - id: prc-01
       criterion: Ingestion is idempotent
-      status: met_in_dev
-      evidence: "tests/test_pipeline_curated.py::test_rerun_is_idempotent_no_duplicate_curated_rows — DuckDB upsert keyed on (baa, interval_start_utc)"
+      status: met
+      evidence: "Re-ran the real SPP ingest against the deployed database twice for the same file (OP-MTLF-202607161800.csv): 386 rows before, 386 rows after -- confirmed 2026-07-17 against production, not just tests/test_pipeline_curated.py::test_rerun_is_idempotent_no_duplicate_curated_rows."
     - id: prc-02
       criterion: Duplicate input is handled
-      status: met_in_dev
-      evidence: "same as prc-01, plus raw-landing hash check"
+      status: met
+      evidence: "same real re-run as prc-01, plus the versioned-snapshot bugfix (docs/DECISION_LOG.md) which specifically handles the case of duplicate-but-revised input for the household bridges"
     - id: prc-03
       criterion: Missing intervals are detected
       status: met_in_dev
-      evidence: "tests/test_missing_interval_detection.py — gap flagged in data_quality_results, not interpolated"
+      evidence: "tests/test_missing_interval_detection.py — gap flagged in data_quality_results, not interpolated. No genuine missing interval has yet occurred in production data to observe directly."
     - id: prc-04
       criterion: Timestamps are normalized
-      status: met_in_dev
-      evidence: "interval_start_utc/interval_end_utc derived from GMTIntervalEnd, tz-aware; see design note in src/powerpipeline/ingest/spp_load.py"
+      status: met
+      evidence: "interval_start_utc/interval_end_utc derived from GMTIntervalEnd, tz-aware (src/powerpipeline/ingest/spp_load.py); confirmed correct on real deployed data via rai-01/ana-04 query results."
     - id: prc-05
       criterion: Freshness is calculated
       status: met
@@ -185,7 +185,7 @@ mvp_acceptance_criteria:
       status: met
       evidence: "docs/INTERVIEW_DEMO.md, and the demo it describes has actually been run successfully (see dem-01)"
 
-  overall_status: mvp_complete_pending_merge_and_tag
+  overall_status: mvp_complete_merged_and_tagged_v0.1.0-mvp
   overall_note: >
     Deployed to /srv/apps/powerpipeline on Odin and registered with
     ResidentAI/OpenWebUI 2026-07-17, both with explicit user go-ahead (see
@@ -196,8 +196,13 @@ mvp_acceptance_criteria:
     original hash-exact raw-landing check treated as a hard failure -- now
     handled correctly with a shared versioned-snapshot landing policy,
     verified against the still-live production condition after the fix.
-    52 tests passing, ruff clean. Every acceptance criterion is "met"
-    except: src-03/ana-05 (genuinely blocked on bl-001, the still-unlocated
-    SPP renewable dataset) and ana-03 (a self-resolving timing gap, not a
-    defect -- see its own evidence note). Remaining: merge to main and tag
-    the release (wq-30), then final handoff (wq-31).
+    52 tests passing, ruff clean. Merged to main and tagged v0.1.0-mvp
+    2026-07-17 (the GitHub repo had no main branch yet -- this was branch
+    creation from the validated tip, not a true merge; secret scan clean).
+    Every acceptance criterion is "met" except: src-03/ana-05 (genuinely
+    blocked on bl-001, the still-unlocated SPP renewable dataset), ana-03
+    (a self-resolving timing gap, not a defect), stg-04/prc-03/prc-06
+    (correctness proven by tests, but no genuine invalid record, missing
+    interval, or multi-day backfill has yet occurred in production to
+    observe directly -- left honestly as met_in_dev rather than claimed
+    without real-world observation). Remaining: final handoff (wq-31).
