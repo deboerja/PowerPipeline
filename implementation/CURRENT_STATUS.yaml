@@ -1,19 +1,18 @@
 version: 1
 current_status:
-  last_updated: "2026-07-17T00:45:00Z"
-  phase: deployed_and_registered_pending_final_e2e_validation
+  last_updated: "2026-07-17T01:10:00Z"
+  phase: mvp_complete_pending_merge_and_tag
   branch: feature/mvp-bootstrap-v1
   summary: >
-    Both remaining checkpoints (real /srv deployment, ResidentAI/OpenWebUI
-    registration) approved by the user and completed 2026-07-17. PowerPipeline
-    runs as 3 systemd timers on Odin against real production data (420+
-    household solar rows, 421+ weather rows, real SPP load data). The
-    ResidentAI-facing tool is registered in OpenWebUI (id
-    residentai_powerpipeline, 8 named operations, 8/8 parsed into callable
-    specs) and was validated by executing its exact source code inside the
-    live openwebui container against the real exported data. Only wq-29
-    (final end-to-end validation) and wq-30 (merge + tag) remain before the
-    MVP can be called fully complete.
+    Full end-to-end validation complete. A genuine production bug was
+    found and fixed during this pass: both the Enphase and weather
+    upstream pipelines can legitimately revise an already-published date's
+    summary, which the original raw-landing immutability check treated as
+    a hard failure. Fixed with a shared versioned-snapshot landing policy
+    and re-verified against the still-live production condition. Every
+    acceptance criterion is now "met" except the two blocked on bl-001 and
+    one self-resolving timing gap (household forecast/actual date overlap).
+    52 tests passing, ruff clean. Ready to merge to main and tag.
 
   completed_phases:
     - repository_discovery
@@ -30,33 +29,33 @@ current_status:
     - deployed_to_srv_apps_powerpipeline_on_odin
     - json_export_and_openwebui_tool_script_built
     - residentai_openwebui_registration_completed
+    - end_to_end_validation_and_production_bugfix
 
-  in_progress_phase: none — ready for final end-to-end validation (wq-29)
+  in_progress_phase: none — ready for merge and tag (wq-30)
 
   not_started:
     - structured_json_logging_for_ingestion_scripts_beyond_residentai_audit
     - powerpipeline_rebuild_entrypoint (documented manual procedure exists; no single command yet)
-    - end_to_end_validation_against_deployed_system_wq29
     - merge_and_tag
+    - final_handoff
 
   test_evidence:
     suite: pytest tests/
-    result: "48 passed"
+    result: "52 passed"
     lint: "ruff check src/ tests/ deployment/ — clean"
     live_smoke_test: "2026-07-16 — real GET against portal.spp.org; 386/386 records accepted"
-    interview_demo: "python -m powerpipeline.demo run-all executed successfully 2026-07-16"
+    interview_demo: "python -m powerpipeline.demo run-all executed successfully, rerun clean after final bugfix"
     systemd_verification: "systemd-analyze verify passed for all 6 unit files"
-    real_deployment_validation: "household bridge auto-fired and succeeded (420+/421+/7 real rows); SPP path manually validated (386/386); auto-run for not-yet-published file correctly recorded failure"
-    residentai_registration_validation: >
-      Tool registered via POST /api/v1/tools/create; verified 8/8 methods
-      parsed into specs via GET /api/v1/tools/id/residentai_powerpipeline.
-      docker-compose.yml diff confirmed to be exactly one added line (the
-      new mount), openwebui service block only. openwebui container
-      recreated and confirmed healthy; ollama's container start time
-      confirmed unchanged before/after. Tool's exact source copied into the
-      running openwebui container and executed there directly --
-      read_pipeline_health returned correct real data through the
-      container's own Python environment.
+    production_bug_found_and_fixed: >
+      powerpipeline-household-bridge.service failed twice in production
+      (weather then Enphase raw-landing collisions) because both upstream
+      pipelines can legitimately revise an already-published date's
+      summary. Reproduced with 4 new regression tests
+      (test_weather_bridge_evolving_day.py, test_enphase_bridge_revision.py),
+      fixed with a shared versioned-snapshot landing policy
+      (src/powerpipeline/ingest/land.py), then re-ran the actual systemd
+      service against the still-affected real data and confirmed success.
+    residentai_registration_validation: "tool's exact source executed inside the live openwebui container against real exported data; rai-04/rai-05 re-verified against the same real registered tool"
 
   deployment:
     runtime_root: /srv/apps/powerpipeline
@@ -65,26 +64,21 @@ current_status:
       - powerpipeline-spp-ingest.service / .timer (hourly, :10)
       - powerpipeline-household-bridge.service / .timer (every 30 min, :05/:35)
       - powerpipeline-quality-check.service / .timer (hourly, :25 -- also runs the JSON export)
-    config_file: "~/.config/residentai/powerpipeline.env (mode 600, no secrets -- path config only)"
+    config_file: "~/.config/residentai/powerpipeline.env (mode 600, no secrets)"
     ports_opened: none
-    docker_compose: not used for PowerPipeline itself (systemd timers only); one read-only mount added to the existing shared ai/docker-compose.yml's openwebui service
+    docker_compose: not used for PowerPipeline itself; one read-only mount added to the shared ai/docker-compose.yml's openwebui service
 
   residentai_integration:
     tool_id: residentai_powerpipeline
     registered_via: "POST /api/v1/tools/create (OpenWebUI REST API, existing admin token)"
     methods: 8
     disable_or_rollback: see docs/OPERATIONS.md "ResidentAI integration: status, disable, and rollback"
-    known_limitation: >
-      API-based delete returned HTTP 401 for the available token's
-      permission set (role=admin, workspace.tools=false) -- disable/delete
-      must go through the OpenWebUI Admin UI, or the mount can be reverted
-      as a no-permission-needed kill-switch. Documented, not silently
-      worked around.
-    credential_note: >
-      While checking this token's permissions via GET /api/v1/auths/, the
-      response echoed the token in plaintext into the assistant's tool
-      output (now part of this session's transcript). Flagged to the user
-      at the time. No other credential was touched.
+
+  known_limitations_at_mvp_completion:
+    - "SPP renewable (wind/solar) forecast-vs-actual dataset not located (bl-001) -- honestly disclosed via read_spp_renewable_conditions, not faked"
+    - "Household forecast-vs-actual accuracy view is correct but hasn't yet observed real overlapping data in production (self-resolving within a day or two)"
+    - "No dedicated python -m powerpipeline.rebuild entrypoint yet -- manual procedure documented in docs/OPERATIONS.md"
+    - "SPP source currently showing 'failing' in source_freshness because SPP itself hasn't published 2026-07-17's file yet at time of writing -- confirmed real external condition, not a bug"
 
   git:
     working_tree: pending_next_commit

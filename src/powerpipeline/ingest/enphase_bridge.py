@@ -3,6 +3,10 @@ PowerPipeline reads these files read-only (no Enphase credentials, no
 network calls to Enphase) and re-validates them under its own contract --
 see docs/EXISTING_COMPONENT_REUSE.md for why this is reused rather than
 rebuilt, and docs/SECURITY_AND_AUTHORITY.md for the read-only boundary.
+
+Uses versioned (not hash-exact) raw landing -- see ingest/land.py -- since
+the upstream Enphase pipeline can legitimately revise an already-published
+date's summary (observed in production 2026-07-17).
 """
 
 from __future__ import annotations
@@ -13,23 +17,13 @@ from pathlib import Path
 import pandas as pd
 
 from powerpipeline.contracts.enphase_summary import validate_raw
+from powerpipeline.ingest.land import land_versioned_snapshot
 from powerpipeline.storage import paths
 
 
 def land_raw(source_path: Path, date: str) -> Path:
     dest_dir = paths.raw_dir("enphase", "daily-summary")
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / f"{date}.json"
-    content = source_path.read_bytes()
-    if dest.exists():
-        if dest.read_bytes() != content:
-            raise ValueError(
-                f"Raw landing collision: {dest} already exists with different content. "
-                "Raw landing is immutable."
-            )
-        return dest
-    dest.write_bytes(content)
-    return dest
+    return land_versioned_snapshot(dest_dir, date, source_path.read_bytes())
 
 
 def read_one(source_path: Path) -> dict:

@@ -437,10 +437,27 @@ work_queue:
       tests: [implementation/MVP_ACCEPTANCE_CRITERIA.yaml, all items]
       acceptance_criteria: all required criteria pass against the deployed system
       risk: medium
-      runtime_impact: none (validation only)
-      status: pending
+      runtime_impact: real -- found and fixed a genuine production bug during this pass
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: >
+        Full regression (52 tests, ruff clean) + offline demo rerun, both
+        green. Re-verified rai-04/rai-05 against the real registered
+        OpenWebUI tool (upgraded met_in_dev -> met). Live systemd/openwebui
+        health check surfaced a genuine production failure:
+        powerpipeline-household-bridge.service failed twice (weather, then
+        Enphase) because both upstream pipelines can legitimately revise an
+        already-published date's summary -- the original hash-exact
+        raw-landing immutability check was too strict for these two sources
+        (see docs/DECISION_LOG.md). Fixed with a shared versioned-snapshot
+        landing policy (ingest/land.py), covered by 2 new regression tests
+        each, then re-ran the actual systemd service against the still-live
+        production condition and confirmed success. SPP's own timer is
+        correctly showing 'failing' for 2026-07-17 because SPP itself
+        hasn't published a file yet (confirmed via direct API check) --
+        real external condition, honestly surfaced, not a bug. Every
+        acceptance criterion except src-03/ana-05 (blocked) and ana-03
+        (self-resolving date-overlap timing gap, not a bug) is "met".
       blocker_ref: null
 
     - id: wq-30

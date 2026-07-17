@@ -242,3 +242,72 @@ execution_history:
       only the two confirmed-working rollback paths (OpenWebUI Admin UI;
       reverting the compose-file mount) rather than assert an unverified
       command.
+
+  - timestamp: "2026-07-17T00:50:00Z"
+    event: user_approved_finishing_the_mvp
+    detail: "User: 'yes, finish it up' -- approved final end-to-end validation and merge/tag."
+
+  - timestamp: "2026-07-17T00:55:00Z"
+    event: rai_04_05_upgraded_with_live_registered_tool_evidence
+    detail: >
+      Called the actual registered residentai_powerpipeline tool script
+      (not just the dev-only ResidentAiReadOnlyTool) against real deployed
+      exports: confirmed a too-large date range and an invalid baa are both
+      correctly rejected, and a real result includes
+      export_generated_at_utc/known_limitations/source/record_count.
+      rai-04 and rai-05 upgraded from met_in_dev to met.
+
+  - timestamp: "2026-07-17T00:58:00Z"
+    event: production_failure_discovered_household_bridge
+    detail: >
+      Live health check during the final validation pass found
+      powerpipeline-household-bridge.service's most recent scheduled run
+      had failed (exit-code 1) with "Raw landing collision:
+      /srv/apps/powerpipeline/raw/weather/daily-actual/2026-07-15.json
+      already exists with different content." Investigated rather than
+      re-running and hoping -- root cause: the upstream weather pipeline's
+      current-day file is still being appended to every 30 minutes until
+      its own nightly finalization.
+
+  - timestamp: "2026-07-17T01:00:00Z"
+    event: weather_bridge_fix_implemented_and_verified
+    detail: >
+      Rewrote weather_bridge.land_raw to land each distinct observed
+      version under its own filename instead of raising. 2 new tests
+      (test_weather_bridge_evolving_day.py) reproduce the exact scenario.
+      Ran the actual scripts/run_household_bridge.sh against real
+      production data and confirmed the weather step now succeeds.
+
+  - timestamp: "2026-07-17T01:01:00Z"
+    event: second_production_failure_discovered_enphase
+    detail: >
+      Triggering the real systemd service (not just the raw script) to
+      confirm the fix immediately surfaced a second, identical-class
+      failure on Enphase's 2026-07-15.json -- the upstream Enphase pipeline
+      can also revise an already-published date's summary (completeness_pct
+      and solar_production_kwh both changed between two runs 26 minutes
+      apart).
+
+  - timestamp: "2026-07-17T01:03:00Z"
+    event: shared_fix_factored_and_verified
+    detail: >
+      Factored the versioned-snapshot landing policy into
+      src/powerpipeline/ingest/land.py, shared by both enphase_bridge.py
+      and weather_bridge.py (SPP's own stricter hash-exact check
+      deliberately left unchanged -- a mismatch there really would
+      indicate a genuine problem). 2 more tests
+      (test_enphase_bridge_revision.py). Ran
+      systemctl --user start powerpipeline-household-bridge.service for
+      real and confirmed success (Result=success, ExecMainStatus=0). 52
+      tests total, all passing; ruff clean. Full documentation of the
+      incident in docs/DECISION_LOG.md.
+
+  - timestamp: "2026-07-17T01:08:00Z"
+    event: final_quality_sweep_and_row_count_confirmation
+    detail: >
+      Ran the real quality-sweep+export script once more: 421 household
+      solar rows, 421 weather rows, 21 household forecast rows, 386 SPP
+      rows, 17 pipeline_runs, 9 data_quality_results -- all consistent.
+      SPP correctly shown as 'failing' because SPP itself hadn't published
+      2026-07-17's file yet at time of writing (confirmed via direct API
+      check) -- a real external condition, not a bug.

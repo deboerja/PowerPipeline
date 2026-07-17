@@ -165,3 +165,40 @@ other credential was read or used beyond this one, already-provisioned key.
 container and executed there directly (not just tested in the repo's own
 venv), confirming it reads the real exported data correctly using the
 container's own Python environment and the new mount.
+
+## 2026-07-17 — Real production bug: upstream Enphase/weather summaries can be revised after publication
+
+**Decision:** Both `enphase_bridge.land_raw` and `weather_bridge.land_raw`
+now use a shared "versioned snapshot" landing policy
+(`ingest/land.py::land_versioned_snapshot`) instead of the hash-exact
+immutability check still used by `spp_load.land_raw`.
+
+**Why:** Caught for real during the final end-to-end validation pass, not
+in a test: `powerpipeline-household-bridge.service` failed twice within
+about half an hour, first on weather's `2026-07-15.json`, then on
+Enphase's `2026-07-15.json` -- both raising "Raw landing collision ...
+already exists with different content." Investigation showed both
+upstream pipelines can legitimately revise an already-landed date's
+summary: weather's *current* day is still being appended to every 30
+minutes until its own nightly finalization job runs, and Enphase's recent
+days can apparently be revised as more telemetry reconciles (observed
+`completeness_pct` and `solar_production_kwh` both changing for the same
+date between two runs 26 minutes apart). The original hash-exact
+immutability check was correct for SPP's genuinely-immutable hourly files
+but too strict for these two sources -- a real production outage, not a
+hypothetical edge case.
+
+**Fix:** land each distinct observed version under its own filename
+(plain `{date}.json` first, then `{date}__{content_hash}.json` for any
+later differing content) rather than raising or overwriting -- still
+genuinely immutable (nothing already landed is ever changed), just no
+longer assuming one file equals one final version per date. Ingestion uses
+the latest version per date. SPP's stricter hash-exact check is
+deliberately left unchanged, since a mismatch there really would indicate
+a genuine problem worth failing loudly on.
+
+**Validation:** reproduced both failures with new tests
+(`test_weather_bridge_evolving_day.py`,
+`test_enphase_bridge_revision.py`), then re-ran the actual
+`powerpipeline-household-bridge.service` against the real, still-affected
+production data and confirmed it now succeeds.
