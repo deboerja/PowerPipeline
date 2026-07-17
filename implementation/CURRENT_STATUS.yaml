@@ -1,24 +1,24 @@
 version: 1
 current_status:
-  last_updated: "2026-07-16T23:50:00Z"
-  phase: full_mvp_implementation_complete_pending_deployment
+  last_updated: "2026-07-17T00:10:00Z"
+  phase: deployed_to_odin_pending_residentai_registration
   branch: feature/mvp-bootstrap-v1
   summary: >
-    Every MVP acceptance criterion except the two blocked on the SPP
-    renewable forecast dataset (bl-001) is now met_in_dev: control-plane
-    docs, SPP load ingestion, Enphase/weather/household-solar-forecast
-    bridges, the ResidentAI read-only tool (8 named operations, structural
-    SQL/write rejection), retry-with-backoff and bounded backfill, 6
-    verified-but-uninstalled systemd unit templates, and an offline
-    interview demo that was actually run end to end (not just written) --
-    generating reports/interview_demo_report.html covering all 20 required
-    steps including an honest disclosure of the renewable-forecast gap. 37
-    automated tests passing, ruff clean, one live smoke test against the
-    real SPP endpoint. What's left is entirely deployment-side: installing
-    the systemd timers, real /srv deployment on Odin, ResidentAI interface
-    registration, and end-to-end validation against the running system --
-    all behind the agent-imposed checkpoints pending explicit user
-    go-ahead.
+    User approved "deploy to /srv on Odin" 2026-07-16. Deployed to
+    /srv/apps/powerpipeline/ (runtime root revised from the originally
+    planned top-level /srv/powerpipeline/ since that required root -- see
+    docs/DECISION_LOG.md). All 3 systemd timers (spp-ingest,
+    household-bridge, quality-check) installed and enabled. The
+    household-bridge timer already fired on its real schedule and succeeded
+    against real production data: 420 household solar rows, 421 weather
+    rows, 7 solar-forecast rows now genuinely curated. SPP ingestion
+    manually validated against a real, currently-existing file (386/386
+    records); the automatic run for today's not-yet-published file
+    correctly recorded a failure instead of fabricating data -- proving
+    both the success and failure paths work against production, not just
+    fixtures. Every acceptance criterion except the two blocked on bl-001
+    (SPP renewable forecast) is now "met" or "met_in_dev" with real
+    evidence -- see implementation/MVP_ACCEPTANCE_CRITERIA.yaml.
 
   completed_phases:
     - repository_discovery
@@ -32,35 +32,47 @@ current_status:
     - scheduling_templates_verified
     - retry_and_bounded_backfill
     - offline_interview_demo_executed
+    - deployed_to_srv_apps_powerpipeline_on_odin
 
-  in_progress_phase: none — awaiting user go-ahead for deployment phase
+  in_progress_phase: none — awaiting user go-ahead for ResidentAI registration
 
   not_started:
     - structured_json_logging_for_ingestion_scripts_beyond_residentai_audit
-    - systemd_timer_installation_on_odin
-    - runtime_deployment_to_srv_powerpipeline
     - residentai_registration_with_openwebui
-    - end_to_end_validation_against_deployed_system
+    - end_to_end_validation_against_deployed_system_wq29
     - merge_and_tag
 
   test_evidence:
     suite: pytest tests/
     result: "37 passed"
     lint: "ruff check src/ tests/ — clean"
-    live_smoke_test: "2026-07-16 — real GET against portal.spp.org/file-browser-api/download/mtlf-vs-actual for 2026-07-16; 386/386 records accepted, 0 rejected, 0 quarantined"
-    interview_demo: "python -m powerpipeline.demo run-all executed successfully 2026-07-16; all 20 steps produced real output; reports/interview_demo_report.html generated"
-    systemd_verification: "systemd-analyze verify passed for all 6 unit files in deployment/systemd/"
-    bug_caught_and_fixed: >
-      test_bounded_backfill_continues_past_one_failed_day surfaced a real
-      bug: a fetch failure inside run_spp_load_ingest was raising before the
-      function's try block, so it would never have been recorded in
-      pipeline_runs. Fixed by moving the fetch/ingest call inside the try
-      block; verified by rerunning the test (and the full suite) afterward.
+    live_smoke_test: "2026-07-16 — real GET against portal.spp.org for 2026-07-16; 386/386 records accepted"
+    interview_demo: "python -m powerpipeline.demo run-all executed successfully 2026-07-16; reports/interview_demo_report.html generated"
+    systemd_verification: "systemd-analyze verify passed for all 6 unit files"
+    real_deployment_validation_2026_07_17: >
+      Household bridge timer auto-fired and succeeded (420/421/7 real rows
+      landed). SPP path manually validated against a real existing file
+      (386/386 records). SPP auto-run for the not-yet-published current-hour
+      file correctly recorded a 'failed' pipeline_runs row and left existing
+      curated data untouched. read_household_solar_history,
+      read_household_solar_forecast, read_spp_load_forecast_accuracy,
+      read_pipeline_health, read_data_quality_summary all called directly
+      against the deployed database and returned real data. A DELETE against
+      the deployed database via the tool's own connection was re-verified
+      to raise DuckDB's read-only error.
+
+  deployment:
+    runtime_root: /srv/apps/powerpipeline
+    code_location: /home/deboerja/git/github/PowerPipeline (git checkout; not copied into /srv, matching the existing homelab convention of running from the git checkout with only data under /srv)
+    systemd_units_installed:
+      - powerpipeline-spp-ingest.service / .timer (hourly, :10)
+      - powerpipeline-household-bridge.service / .timer (every 30 min, :05/:35)
+      - powerpipeline-quality-check.service / .timer (hourly, :25)
+    config_file: "~/.config/residentai/powerpipeline.env (mode 600, no secrets -- path config only)"
+    ports_opened: none
+    docker_compose: not used — systemd timers only, matching every other homelab capability
 
   checkpoints_awaiting_user_go_ahead:
-    - installing/enabling the systemd timers on Odin
-    - deploying to /srv/powerpipeline on Odin
-    - wiring real Enphase/weather credentials into PowerPipeline code (currently untested against real /srv paths, only fixtures)
     - restarting any ResidentAI/OpenWebUI component
     - registering the ResidentAI-facing interface for real use
 

@@ -133,11 +133,13 @@ rebuilds. Discovery performed 2026-07-16 across the `homelab/scripts` and
   for dated archives, individually allowlisted per container mount); credential
   files bind-mounted individually and read-only, never the whole
   `~/.config/residentai/` directory.
-- **PowerPipeline's choice:** a **sibling** top-level `/srv/powerpipeline/`
-  (see `docs/DECISION_LOG.md`), not nested under `/srv/apps/resident-ai/`,
-  since PowerPipeline owns a materially larger and differently-shaped dataset
-  (raw/normalized/curated/DuckDB) than ResidentAI's existing snapshot-only
-  tree.
+- **PowerPipeline's choice:** `/srv/apps/powerpipeline/`, a sibling app
+  directory alongside `ollama`, `openwebui`, `forgejo`, etc. -- not nested
+  under `/srv/apps/resident-ai/`, since PowerPipeline owns a materially
+  larger and differently-shaped dataset (raw/normalized/curated/DuckDB) than
+  ResidentAI's existing snapshot-only tree. (A top-level `/srv/powerpipeline/`
+  was the original plan; revised at actual deployment time when it turned out
+  to require root to create -- see `docs/DECISION_LOG.md`.)
 
 ## Not found / genuinely new ground
 

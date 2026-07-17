@@ -343,14 +343,27 @@ work_queue:
       objective: Deploy isolated runtime
       scope: [runtime]
       dependencies: [wq-16, wq-23]
-      expected_outputs: ["/srv/powerpipeline/ on Odin, docker-compose.yml"]
+      expected_outputs: ["/srv/apps/powerpipeline/ on Odin, systemd units installed"]
       tests: [health check passes]
       acceptance_criteria: services running, isolated, no port conflicts
       risk: high
-      runtime_impact: real — behind agent checkpoint, requires user go-ahead
-      status: pending
+      runtime_impact: real — deployed 2026-07-17 with explicit user go-ahead ("deploy to /srv on Odin")
+      status: completed
       commit: ""
-      validation_evidence: ""
+      validation_evidence: >
+        /srv/apps/powerpipeline/ created (runtime root revised from the
+        originally planned top-level /srv/powerpipeline/ -- see
+        docs/DECISION_LOG.md). No Docker Compose stack was needed; deployed
+        as 3 systemd user timers (spp-ingest, household-bridge, quality-check),
+        all enabled and verified with systemd-analyze verify. No new ports
+        opened -- ingestion is outbound-only, no listening service.
+        household-bridge timer fired automatically on schedule and
+        succeeded against real production data (420 household solar rows,
+        421 weather rows, 7 solar-forecast rows landed in the deployed
+        DuckDB). SPP path manually validated against a real, currently-
+        existing file (386/386 records). The auto-triggered run for
+        2026-07-17's not-yet-published file correctly recorded a failed
+        pipeline_runs row instead of fabricating data.
       blocker_ref: null
 
     - id: wq-26

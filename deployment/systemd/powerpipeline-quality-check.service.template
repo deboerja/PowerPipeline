@@ -4,7 +4,7 @@ Documentation=file:/home/deboerja/git/github/PowerPipeline/docs/OPERATIONS.md
 
 [Service]
 Type=oneshot
-Environment=POWERPIPELINE_RUNTIME_ROOT=/srv/powerpipeline
+Environment=POWERPIPELINE_RUNTIME_ROOT=/srv/apps/powerpipeline
 ExecStart=/home/deboerja/git/github/PowerPipeline/scripts/run_quality_sweep.sh
 Nice=5
 TimeoutStartSec=60

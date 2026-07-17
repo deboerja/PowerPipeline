@@ -85,3 +85,24 @@ itself, change the cost/benefit of pausing before an action like that — the
 pause is cheap, a mistake there is not. This is recorded here, in
 `MVP_AUTONOMY_PROFILE.md`, and was stated directly to the user at the start of
 this work.
+
+## 2026-07-16 — Runtime root revised: `/srv/apps/powerpipeline/`, not `/srv/powerpipeline/`
+
+**Decision:** Deploy PowerPipeline's runtime data under `/srv/apps/powerpipeline/`
+instead of the originally planned top-level `/srv/powerpipeline/`.
+
+**Why:** At actual deployment time (user approved "deploy to /srv on Odin"),
+creating a new top-level directory under `/srv` required root (`/srv` itself
+is `root:root`, mode 755 — `mkdir /srv/powerpipeline` failed with permission
+denied, and `sudo` requires a password this session doesn't have and won't
+prompt for). `/srv/apps/` is owned by `deboerja:deboerja` and already holds
+every other homelab service's runtime state (`ollama`, `openwebui`, `forgejo`,
+`resident-ai`, etc.) — `EXISTING_COMPONENT_REUSE.md` had already scoped this
+out as the fallback option before this session even reached deployment. Using
+it needs no privilege escalation and matches the proven convention exactly,
+so the pivot was made autonomously rather than interrupting the user for a
+sudo password over something this routine.
+
+**Impact:** All docs, `.env.example`, and systemd unit templates updated to
+reference `/srv/apps/powerpipeline/` consistently. No functional difference
+to the pipeline itself — this is purely a filesystem-location decision.

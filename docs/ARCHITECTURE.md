@@ -13,7 +13,7 @@
                                  ▼
                  ┌─────────────────────────────────────────────┐
                  │  RAW  (immutable landing, one file per pull) │
-                 │  /srv/powerpipeline/raw/{source}/{date}/...  │
+                 │  /srv/apps/powerpipeline/raw/{source}/{date}/...  │
                  └───────────────┬───────────────────────────────┘
                                  │  schema validation (Pandera/Pydantic)
                          pass    │    fail
@@ -65,8 +65,8 @@ curated layer the same way ResidentAI does — no separate code path.
   completeness/range/freshness check outcomes), `source_freshness` (per-source
   last-successful-pull timestamp and staleness).
 - **Logs** — structured JSON, one line per event, to
-  `/srv/powerpipeline/logs/`.
-- **Reports** — generated HTML/artifacts under `/srv/powerpipeline/reports/`.
+  `/srv/apps/powerpipeline/logs/`.
+- **Reports** — generated HTML/artifacts under `/srv/apps/powerpipeline/reports/`.
 
 ## Idempotency and incremental loading
 

@@ -44,7 +44,7 @@ shows both rejected.
 
 ## Runtime isolation
 
-PowerPipeline owns exactly `/srv/powerpipeline/` and its own Compose
+PowerPipeline owns exactly `/srv/apps/powerpipeline/` and its own Compose
 project/systemd units. It does not touch unrelated `/srv` paths, does not
 restart unrelated services, does not modify the existing `ai` Compose
 project's file directly (a new `docker-compose.yml` under

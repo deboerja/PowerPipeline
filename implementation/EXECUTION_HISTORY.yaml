@@ -113,3 +113,66 @@ execution_history:
       confirmed the gap is now correctly flagged. Generated
       reports/interview_demo_report.html. 37 tests total, all passing; ruff
       clean.
+
+  - timestamp: "2026-07-16T23:56:00Z"
+    event: user_approved_srv_deployment
+    detail: "User: 'go ahead, deploy to /srv on Odin' -- explicit go-ahead for the deployment checkpoint (does not cover ResidentAI restart or interface registration, which remain separate checkpoints)."
+
+  - timestamp: "2026-07-16T23:58:00Z"
+    event: runtime_root_revised_mid_deployment
+    detail: >
+      mkdir /srv/powerpipeline failed with permission denied (/srv is
+      root:root, mode 755; sudo requires a password this session doesn't
+      have). Pivoted to /srv/apps/powerpipeline/ (owned by deboerja,
+      matches every other homelab service's convention exactly, already
+      scoped as the fallback in docs/EXISTING_COMPONENT_REUSE.md before
+      deployment even started). Updated all docs, .env.example, and systemd
+      templates to reference the new path; re-verified with
+      systemd-analyze verify (clean). Recorded in docs/DECISION_LOG.md.
+
+  - timestamp: "2026-07-17T00:00:00Z"
+    event: srv_directory_and_env_created
+    detail: "/srv/apps/powerpipeline/{raw,quarantine,normalized,database,metadata,logs,reports,backups,state} created; ~/.config/residentai/powerpipeline.env written (mode 600, path config only, no secrets)."
+
+  - timestamp: "2026-07-17T00:01:00Z"
+    event: systemd_units_installed_and_enabled
+    detail: "6 unit files copied to ~/.config/systemd/user/ (template disclaimer replaced with an approval note); daemon-reload; enabled + started all 3 timers."
+
+  - timestamp: "2026-07-17T00:02:57Z"
+    event: spp_ingest_auto_run_correctly_failed_closed
+    detail: >
+      The spp-ingest service (manually triggered to validate) requested
+      2026-07-17's file, which SPP had not yet published (confirmed via
+      direct API check -- the folder was empty). Correctly raised, and the
+      failure was correctly recorded as a 'failed' pipeline_runs row with
+      source_freshness.status='failing' -- not hidden, not fabricated.
+
+  - timestamp: "2026-07-17T00:05:27Z"
+    event: household_bridge_auto_run_succeeded_on_real_schedule
+    detail: >
+      powerpipeline-household-bridge.timer fired on its own real schedule
+      (not manually triggered) and succeeded against real production data:
+      420 household solar rows, 421 weather rows, 7 solar-forecast rows
+      landed in the deployed DuckDB at /srv/apps/powerpipeline/database/
+      powerpipeline.duckdb.
+
+  - timestamp: "2026-07-17T00:06:13Z"
+    event: spp_ingest_manually_validated_against_real_existing_file
+    detail: >
+      Ran pipeline.run_spp_load_ingest against OP-MTLF-202607161800.csv
+      (confirmed to actually exist via direct API check) on the deployed
+      system: 386/386 records accepted, 0 rejected. Proves the SPP path
+      itself works correctly against production; the earlier failure was
+      purely an upstream publication-timing condition, not a bug.
+
+  - timestamp: "2026-07-17T00:08:00Z"
+    event: full_residentai_tool_validation_against_deployed_database
+    detail: >
+      Called read_household_solar_history, read_household_solar_forecast,
+      read_spp_load_forecast_accuracy, read_pipeline_health, and
+      read_data_quality_summary directly against the deployed database --
+      all returned real, correct data. Re-verified the write-rejection
+      guarantee against the deployed database specifically (a DELETE via
+      the tool's own connection raised DuckDB's read-only error).
+      Acceptance criteria upgraded from met_in_dev to met accordingly (see
+      implementation/MVP_ACCEPTANCE_CRITERIA.yaml).

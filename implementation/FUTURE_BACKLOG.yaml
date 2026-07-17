@@ -49,4 +49,4 @@ future_backlog:
     - id: fb-008
       title: Full retention-policy automation (tiered archive/expiry)
       depends_on: none, deferred by MVP_AUTONOMY_PROFILE.md relaxed controls
-      notes: MVP retains everything under /srv/powerpipeline without automated expiry
+      notes: MVP retains everything under /srv/apps/powerpipeline without automated expiry

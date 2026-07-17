@@ -45,13 +45,13 @@ file copy, not a database dump/restore procedure.
 
 ```bash
 # backup (safe while writers are idle; ingestion is not continuously writing)
-cp /srv/powerpipeline/database/powerpipeline.duckdb \
-   /srv/powerpipeline/backups/powerpipeline-$(date -u +%Y%m%dT%H%M%SZ).duckdb
+cp /srv/apps/powerpipeline/database/powerpipeline.duckdb \
+   /srv/apps/powerpipeline/backups/powerpipeline-$(date -u +%Y%m%dT%H%M%SZ).duckdb
 
 # restore
 systemctl --user stop powerpipeline-*.timer
-cp /srv/powerpipeline/backups/powerpipeline-<timestamp>.duckdb \
-   /srv/powerpipeline/database/powerpipeline.duckdb
+cp /srv/apps/powerpipeline/backups/powerpipeline-<timestamp>.duckdb \
+   /srv/apps/powerpipeline/database/powerpipeline.duckdb
 systemctl --user start powerpipeline-*.timer
 ```
 
